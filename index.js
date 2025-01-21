@@ -3,10 +3,12 @@ const mongoose = require("mongoose")
 const cors = require("cors")
 const argon2 = require("argon2")
 const UserModel = require("./models/Users.js")
+const jwt = require("jsonwebtoken")
+const nodemailer = require("nodemailer")
 
 const app = express()
 app.use(express.json())
-app.use(cors())
+app.use(cors({ origin: 'http://localhost:5174' })); // Replace with your frontend URL
 
 try{
     mongoose.connect("mongodb://127.0.0.1:27017/Sprintly")
@@ -43,6 +45,61 @@ app.post("/login", async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+app.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
+  
+    const user = await UserModel.findOne({ email }); 
+    if (user) {
+      const token = jwt.sign({id: user._id}, "jwt_secret_key",{expiresIn: "1h"});
+      var transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: 'riza.ganglia@gmail.com',
+          pass: 'rptt vygb qrix xyeq'
+        }
+      });
+      
+      var mailOptions = {
+        from: 'riza.ganglia@gmail.com',
+        to: email,
+        subject: 'Reset Password',
+        text: `http://localhost:5174/reset-password/${user._id}/${token}`  // Fixed string interpolation
+      };
+      
+      transporter.sendMail(mailOptions, function(error, info){
+        if (error) {
+          console.log(error);
+        } else {
+          return res.send({ Status: "Success" });
+        }
+      });
+      res.json({ success: true });
+    } else {
+      res.json({ success: false });
+    }
+});
+
+app.post('/reset-password/:id/:token', async (req, res) => {
+    const { id, token } = req.params;
+    const { password } = req.body;
+  
+    try {
+      const decoded = jwt.verify(token, "jwt_secret_key");  // Verify the token
+      if (decoded.id !== id) {
+        return res.status(400).json({ message: "Invalid reset token." });
+      }
+  
+      const hashedPassword = await argon2.hash(password);  // Hash the new password
+      await UserModel.findByIdAndUpdate(id, { password: hashedPassword });  // Update the password
+  
+      return res.json({ success: true, message: 'Password updated successfully.' });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ success: false, message: 'Failed to reset password. Token may have expired.' });
+    }
+  });
+   
 
 
 
