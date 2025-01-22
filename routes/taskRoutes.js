@@ -1,9 +1,11 @@
 const express = require('express');
-const taskController = require('../controllers/taskController');
+const addTask = require('../controllers/addTask');
+const fetchAllTasks = require('../controllers/fetchAllTasks');
 
 const router = express.Router();
 
-router.post('/tasks', taskController.createTask);
-router.get('/tasks', taskController.getAllTasks);
+router.post('/tasks', addTask.addTask);
+
+router.get('/tasks', fetchAllTasks.fetchAllTasks);
 
 module.exports = router;
