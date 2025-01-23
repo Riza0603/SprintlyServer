@@ -18,8 +18,8 @@ var transporter = nodemailer.createTransport({
   port: 587,
   secure: false,
   auth: {
-    user: "shreyas.ganglia@gmail.com",
-    pass: "dahv ozwa kfzc ycob",
+    user: "technologiesganglia@gmail.com",
+    pass: "cgao azbd ffdq vbcz",
   },
   debug: true, 
 });
@@ -34,7 +34,8 @@ try {
 
 app.post("/signup", async (req, res) => {
   console.log("signup");
-  const { name, email, verificationCode } = req.body;
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const { name, email, } = req.body;
 
   try {
     // Hash OTP using bcrypt
@@ -47,22 +48,43 @@ app.post("/signup", async (req, res) => {
 
     // Save the OTP with the user ID in the UserOtpVerification model
     const newUserOtp = new UserOtp({
-      userId: newUser._id,  // Save the new user's ID
-      otp: hashedOTP,        // Store the hashed OTP
+      userId: newUser._id,
+      email, // Add this field
+      otp: hashedOTP,
       createdAt: Date.now(),
-      expiresAt: Date.now() + 3600000,  // OTP expiration time (1 hour)
+      expiresAt: Date.now() + 3600000,
     });
+    
 
     await newUserOtp.save();
     console.log("OTP saved in UserOtpVerification model");
 
     // Send OTP email to the user
-    var mailOptions = {
-      from: "Sprintly",
-      to: email,
-      subject: "Verify Your Email",
-      text: "OTP: " + verificationCode,  // Send plain OTP to the user
-    };
+    // Send OTP email to the user
+var mailOptions = {
+  from: "Sprintly",
+  to: email,
+  subject: "Verify Your Email",
+  html: `
+    <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; border-radius: 8px; border: 1px solid #ddd;">
+      <h2 style="color: #333; text-align: center;">Welcome to Sprintly!</h2>
+      <p style="color: #555; font-size: 16px;">
+        Thank you for signing up. Please use the following OTP to verify your email address:
+      </p>
+      <p style="text-align: center; font-size: 24px; font-weight: bold; color: #4CAF50; margin: 20px 0;">
+        ${verificationCode}
+      </p>
+      <p style="color: #555; font-size: 14px;">
+        This OTP is valid for only a limited time. If you did not request this, please ignore this email.
+      </p>
+      <footer style="margin-top: 20px; text-align: center; font-size: 12px; color: #888;">
+        <p>Need help? <a href="mailto:technologiesganglia@gmail.com" style="color: #4CAF50; text-decoration: none;">Contact Support</a></p>
+        <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+      </footer>
+    </div>
+  `,
+};
+
 
     transporter.sendMail(mailOptions, function (error, info) {
       if (error) {
@@ -108,15 +130,14 @@ app.post("/verifyOTP", async (req, res) => {
       throw new Error("Empty OTP or Email not allowed");
     }
 
-    // Find OTP records associated with the email
-    const UserOtpVerificationRecords = await UserOtpVerification.find({ email });
+    // Find OTP record associated with the email
+    const UserOtpVerificationRecord = await UserOtpVerification.findOne({ email });
 
-    // Check if no records were found or if OTP is already verified
-    if (UserOtpVerificationRecords.length <= 0) {
+    // Check if no record was found or if OTP is already verified
+    if (!UserOtpVerificationRecord) {
       throw new Error("Account record does not exist or is already verified");
     } else {
-      const { expiresAt } = UserOtpVerificationRecords[0];
-      const hashedOTP = UserOtpVerificationRecords[0].otp;
+      const { expiresAt, otp: hashedOTP } = UserOtpVerificationRecord;
 
       // Check if OTP has expired
       if (expiresAt < Date.now()) {
@@ -151,6 +172,7 @@ app.post("/verifyOTP", async (req, res) => {
     });
   }
 });
+
 
 
 app.listen(3002, () => {
