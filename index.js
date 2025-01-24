@@ -35,16 +35,24 @@ try {
 app.post("/signup", async (req, res) => {
   console.log("signup");
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const { name, email, } = req.body;
+  const { name, email, password } = req.body;
 
   try {
+    // Check if email already exists
+    const existingUser = await UserModel.findOne({ email });
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already exists." });
+    }
+
     // Hash OTP using bcrypt
     const saltRounds = 10;
     const hashedOTP = await bcrypt.hash(verificationCode, saltRounds);
     console.log("Hashed OTP: ", hashedOTP);
 
     // Create the user and get the user ID
-    const newUser = await UserModel.create(req.body);
+    const newUser = await UserModel.create({ name, email, password });
 
     // Save the OTP with the user ID in the UserOtpVerification model
     const newUserOtp = new UserOtp({
@@ -54,37 +62,34 @@ app.post("/signup", async (req, res) => {
       createdAt: Date.now(),
       expiresAt: Date.now() + 3600000,
     });
-    
 
     await newUserOtp.save();
     console.log("OTP saved in UserOtpVerification model");
 
     // Send OTP email to the user
-    // Send OTP email to the user
-var mailOptions = {
-  from: "Sprintly",
-  to: email,
-  subject: "Verify Your Email",
-  html: `
-    <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; border-radius: 8px; border: 1px solid #ddd;">
-      <h2 style="color: #333; text-align: center;">Welcome to Sprintly!</h2>
-      <p style="color: #555; font-size: 16px;">
-        Thank you for signing up. Please use the following OTP to verify your email address:
-      </p>
-      <p style="text-align: center; font-size: 24px; font-weight: bold; color: #4CAF50; margin: 20px 0;">
-        ${verificationCode}
-      </p>
-      <p style="color: #555; font-size: 14px;">
-        This OTP is valid for only a limited time. If you did not request this, please ignore this email.
-      </p>
-      <footer style="margin-top: 20px; text-align: center; font-size: 12px; color: #888;">
-        <p>Need help? <a href="mailto:technologiesganglia@gmail.com" style="color: #4CAF50; text-decoration: none;">Contact Support</a></p>
-        <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
-      </footer>
-    </div>
-  `,
-};
-
+    var mailOptions = {
+      from: "Sprintly",
+      to: email,
+      subject: "Verify Your Email",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; border-radius: 8px; border: 1px solid #ddd;">
+          <h2 style="color: #333; text-align: center;">Welcome to Sprintly!</h2>
+          <p style="color: #555; font-size: 16px;">
+            Thank you for signing up. Please use the following OTP to verify your email address:
+          </p>
+          <p style="text-align: center; font-size: 24px; font-weight: bold; color: #4CAF50; margin: 20px 0;">
+            ${verificationCode}
+          </p>
+          <p style="color: #555; font-size: 14px;">
+            This OTP is valid for only a limited time. If you did not request this, please ignore this email.
+          </p>
+          <footer style="margin-top: 20px; text-align: center; font-size: 12px; color: #888;">
+            <p>Need help? <a href="mailto:technologiesganglia@gmail.com" style="color: #4CAF50; text-decoration: none;">Contact Support</a></p>
+            <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+          </footer>
+        </div>
+      `,
+    };
 
     transporter.sendMail(mailOptions, function (error, info) {
       if (error) {
