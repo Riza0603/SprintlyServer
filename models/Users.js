@@ -19,4 +19,4 @@ userSchema.pre("save", async function (next) {
 });
 
 const UserModel = mongoose.model("register", userSchema);
-export default UserModel; // Use ES Modules export
+export default UserModel; 
