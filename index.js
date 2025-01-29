@@ -5,17 +5,32 @@ const argon2 = require("argon2")
 const UserModel = require("./models/Users.js")
 const jwt = require("jsonwebtoken")
 const nodemailer = require("nodemailer")
-const taskRoutes = require('./routes/taskRoutes.js');
+const taskRoutes = require('./routes/taskRoutes');
+const bodyParser = require("body-parser");
+
+const projectRoute = require('./routes/projectRoute.js');
+
+
+
 const app = express()
-app.use(express.json())
-app.use(cors({ origin: '*' })); // Replace with your frontend URL
-app.use('/api', taskRoutes);
-try{
-    mongoose.connect("mongodb://127.0.0.1:27017/Sprintly")
-    console.log("connected to mongodb database")
-}catch(error){
-    console.log("error connecting to database"+ error)
-}
+app.use(bodyParser.json());
+app.use(cors({origin: "*"}));
+
+const MONGO_URI = "mongodb+srv://sprintly-ganglia:sprintly-ganglia0601@sprintly-ganglia.w1fqw.mongodb.net/myDatabase?retryWrites=true&w=majority";
+
+
+mongoose.connect(MONGO_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('Connected to MongoDB Atlas'))
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+});
+
+app.use("/api", projectRoute);
+app.use("/api", taskRoutes); // All task-related routes
+
 
 app.post("/signup",(req,res)=>{
     UserModel.create(req.body).then(u=>res.json(u)).catch(e=>res.json(e))
@@ -103,4 +118,8 @@ app.post('/reset-password/:id/:token', async (req, res) => {
 
 
 
-app.listen(5000,()=>{console.log("Server has started")})
+  const PORT=5000;
+
+  app.listen(PORT, () =>{
+      console.log("server is running on port 5000");
+  })

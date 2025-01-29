@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const connectDB = async () => {
   try {
-    const dbURI = "mongodb+srv://sprintly-ganglia:sprintly-ganglia0601@sprintly-ganglia.w1fqw.mongodb.net/?retryWrites=true&w=majority&appName=sprintly-ganglia"; 
+    const dbURI = "mongodb+srv://sprintly-ganglia:<db_password>@sprintly-ganglia.w1fqw.mongodb.net/?retryWrites=true&w=majority&appName=sprintly-ganglia"; 
     await mongoose.connect(dbURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
