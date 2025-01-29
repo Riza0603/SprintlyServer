@@ -5,5 +5,5 @@ const ProjectContoller = require('../controllers/projectController');
 
 
 router.post("/createProject", ProjectContoller.createProject);
-
+router.get("/fetchProject",ProjectContoller.fetchProjects);
 module.exports = router;

@@ -1,7 +1,7 @@
 const ProjectModel = require('../models/Projects');
 
 exports.createProject = async (req, res) => {
-  const { pname, pdescription, pstart, pend } = req.body;
+  const { pname, pdescription, pstart, pend} = req.body;
 
   
   if (!pname || !pdescription || !pstart || !pend) {
@@ -26,6 +26,16 @@ exports.createProject = async (req, res) => {
       });
   }
 };
+
+exports.fetchProjects= async (req,res)=>{
+        try {
+            const projects = await ProjectModel.find(); 
+            res.status(200).json(projects);
+          } catch (err) {
+            console.error("Error in fetchProjects:", err.message);
+            res.status(500).json({ message: err.message });
+          }
+}
 
 
 
