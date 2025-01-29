@@ -5,11 +5,11 @@ const argon2 = require("argon2")
 const UserModel = require("./models/Users.js")
 const jwt = require("jsonwebtoken")
 const nodemailer = require("nodemailer")
-
+const taskRoutes = require('./routes/taskRoutes.js');
 const app = express()
 app.use(express.json())
-app.use(cors({ origin: 'http://localhost:5174' })); // Replace with your frontend URL
-
+app.use(cors({ origin: '*' })); // Replace with your frontend URL
+app.use('/api', taskRoutes);
 try{
     mongoose.connect("mongodb://127.0.0.1:27017/Sprintly")
     console.log("connected to mongodb database")
@@ -103,4 +103,4 @@ app.post('/reset-password/:id/:token', async (req, res) => {
 
 
 
-app.listen(3002,()=>{console.log("Server has started")})
+app.listen(5000,()=>{console.log("Server has started")})

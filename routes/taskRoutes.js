@@ -1,11 +1,9 @@
-const express = require('express');
-const addTask = require('../controllers/addTask');
-const fetchAllTasks = require('../controllers/fetchAllTasks');
-
+const express = require("express");
+const TaskController = require("../controllers/taskControllers");
 const router = express.Router();
 
-router.post('/tasks', addTask.addTask);
-
-router.get('/tasks', fetchAllTasks.fetchAllTasks);
+// Task Routes
+router.post("/tasks", TaskController.addTask); // Add Task
+router.get("/tasks", TaskController.getTasks); // Fetch Tasks
 
 module.exports = router;

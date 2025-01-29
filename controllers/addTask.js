@@ -22,3 +22,13 @@ exports.addTask = async (req, res) => {
         res.status(400).json({ message: err.message });
     }
 };
+
+// Fetch Tasks API
+exports.getTasks = async (req, res) => {
+    try {
+        const tasks = await TaskModel.find();
+        res.status(200).json(tasks);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
