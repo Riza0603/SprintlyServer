@@ -7,7 +7,8 @@ const jwt = require("jsonwebtoken")
 const nodemailer = require("nodemailer")
 const taskRoutes = require('./routes/taskRoutes');
 const bodyParser = require("body-parser");
-
+const ConnectDb=require('./config/db.js')
+// import connectDB from "./config/db.js"
 const projectRoute = require('./routes/projectRoute.js');
 
 
@@ -16,18 +17,18 @@ const app = express()
 app.use(bodyParser.json());
 app.use(cors({origin: "*"}));
 
-const MONGO_URI = "mongodb+srv://sprintly-ganglia:sprintly-ganglia0601@sprintly-ganglia.w1fqw.mongodb.net/myDatabase?retryWrites=true&w=majority";
+// const MONGO_URI = "mongodb+srv://sprintly-ganglia:sprintly-ganglia0601@sprintly-ganglia.w1fqw.mongodb.net/SprintlyDB?retryWrites=true&w=majority&appName=sprintly-ganglia";
 
 
-mongoose.connect(MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('Connected to MongoDB Atlas'))
-.catch(err => {
-  console.error('MongoDB connection error:', err);
-});
-
+// mongoose.connect(MONGO_URI, {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true,
+// })
+// .then(() => console.log('Connected to MongoDB Atlas'))
+// .catch(err => {
+//   console.error('MongoDB connection error:', err);
+// });
+ConnectDb();
 app.use("/api", projectRoute);
 app.use("/api", taskRoutes); // All task-related routes
 

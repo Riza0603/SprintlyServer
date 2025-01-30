@@ -11,6 +11,7 @@ const TaskSchema = new mongoose.Schema({
   endDate: { type: Date, default: null },
   createdBy: { type: String, default: "None" },
   createdAt: { type: Date, default: Date.now },
+  
   comments: [
     {
       username: { type: String, required: true },
