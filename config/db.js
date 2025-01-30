@@ -1,12 +1,18 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const connectDB = async () => {
   try {
-    await mongoose.connect("mongodb+srv://sprintly-ganglia:sprintly-ganglia0601@sprintly-ganglia.w1fqw.mongodb.net/SprintlyDB?retryWrites=true&w=majority");
-    console.log("Connected to MongoDB database");
+    const dbURI = "mongodb+srv://sprintly-ganglia:sprintly-ganglia0601@sprintly-ganglia.w1fqw.mongodb.net/SprintlyDB?retryWrites=true&w=majority"; 
+    await mongoose.connect(dbURI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("Connected to MongoDB Atlas");
   } catch (error) {
-    console.error("Error connecting to database:", error);
+    console.error("Error connecting to MongoDB:", error);
+    process.exit(1); 
   }
 };
 
-module.exports = connectDB;
+// Export using ES module syntax
+export default connectDB;

@@ -1,9 +1,9 @@
-const User = require("../models/User.js");
-const jwt = require("jsonwebtoken");
-const argon2 = require("argon2");
-const transporter = require("../config/emailTransporter.js");
-const UserOtpVerification = require("../models/UserOtpVerification.js");
-const bcrypt = require("bcrypt");
+import User from "../models/User.js";
+import jwt from "jsonwebtoken";
+import argon2 from "argon2";
+import transporter from "../config/emailTransporter.js";
+import UserOtpVerification from "../models/UserOtpVerification.js";
+import bcrypt from "bcrypt";
 
 
 export const login = async (req, res) => {

@@ -1,5 +1,6 @@
-const express = require("express");
-const { login, forgotPassword, resetPassword, signup, verifyOTP } = require("../controllers/authController.js");
+import express from "express";
+import { login, forgotPassword, resetPassword, signup, verifyOTP } from "../controllers/authController.js";
+
 
 const router = express.Router();
 

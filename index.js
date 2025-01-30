@@ -1,15 +1,16 @@
-const express = require("express");
-const cors = require("cors");
-const connectDB = require("./config/db.js");
-const authRoutes = require("./routes/authRoutes.js");
-const projectRoute = require('./routes/projectRoute.js');
-const taskRoutes = require('./routes/taskRoutes');
-const bodyParser = require("body-parser");
+import express from "express";
+import cors from "cors";
+import connectDB from "./config/db.js";
+import bodyParser from "body-parser";
+import authRoutes from "./routes/authRoutes.js";  
+import projectRoute from "./routes/projectRoutes.js";
+import taskRoutes from "./routes/taskRoutes.js";
 
-app.use(bodyParser.json());
-const app = express();
+const app = express();  // Initialize app before using it
+
+app.use(bodyParser.json());  // Now it works because app is initialized
 app.use(express.json());
-app.use(cors({origin: "*"}));
+app.use(cors({ origin: "*" }));
 
 connectDB();
 
@@ -17,4 +18,4 @@ app.use("/auth", authRoutes);
 app.use("/api", projectRoute);
 app.use("/api", taskRoutes);
 
-app.listen(3002, () => console.log("Server has started"));
+app.listen(5000, () => console.log("Server has started"));
