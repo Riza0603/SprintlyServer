@@ -4,15 +4,43 @@ import argon2 from "argon2";
 import transporter from "../config/emailTransporter.js";
 import UserOtpVerification from "../models/UserOtpVerification.js";
 import bcrypt from "bcrypt";
+import dotenv from "dotenv";
 
+//errorHandler
+const handleErrors = (err, res) => {
+  console.error("Error:", err.message, err.code);
+  if (err.code === 11000) {
+    return res.status(400).json({ success: false, message: "Record already exists." });
+  }
 
+  res.status(500).json({ success: false, message: err.message || "Internal server error", code: err.code });
+};
+
+//login
 export const login = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (user) {
       const isValidPassword = await argon2.verify(user.password, req.body.password);
+      console.log("Is valid password: ", isValidPassword); // Debugging log for password verification
+
       if (isValidPassword) {
-        res.json({ success: true, message: "Login Successful!" });
+        // Generate JWT Token
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+        res.json({
+          success: true,
+          message: "Login Successful!",
+          user: {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            experience: user.experience,
+            reportTo: user.reportTo
+          },
+          token
+        });
       } else {
         res.json({ success: false, message: "Invalid Password" });
       }
@@ -25,6 +53,8 @@ export const login = async (req, res) => {
   }
 };
 
+
+//forgot password
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email });
@@ -69,6 +99,9 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+
+//reset password
+// 
 export const resetPassword = async (req, res) => {
   const { id, token } = req.params;
   const { password } = req.body;
@@ -101,6 +134,8 @@ export const resetPassword = async (req, res) => {
 };
 
 
+
+//regisration
 export const signup = async (req, res) => {
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
   const { name, email, password } = req.body;
@@ -182,3 +217,90 @@ export const verifyOTP = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
+export const getUser = async (req, res) => {
+  console.log("Received request for user:", req.params.email);
+
+  const { email } = req.params;
+  const token = req.headers.authorization?.split(" ")[1]; // Extract Bearer token
+  console.log("Token:", token);
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: "Unauthorized: No token provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Token verified:", decoded);
+  } catch (err) {
+    console.log("Invalid token");
+    return res.status(401).json({ success: false, message: "Invalid token" });
+  }
+
+  try {
+    const user = await User.findOne({ email }).select("name email experience role reportTo"); // Explicitly select fields
+
+    if (!user) {
+      console.log("User not found:", email);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    console.log("User found:", JSON.stringify(user, null, 2)); // Better logging
+    res.json({ success: true, user });
+  } catch (error) {
+    handleErrors(error, res); // Pass error to the error handler
+  }
+};
+
+
+export const updateUser = async (req, res) => {
+  try{
+    const { email, name, experience, role, reportTo } = req.body;
+    const user = await User.findOneAndUpdate({ email }, { name, experience, role, reportTo }, { new: true });
+    if(!user){
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.json({ success: true, user });
+  }catch(error){
+    console.error("Error updating user:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+//verify-token
+export const verifyToken = async (req, res) => {
+  const { id } = req.params;
+  const { token } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded || decoded.id !== id) {
+      return res.status(400).json({ success: false, message: "Invalid or expired token." });
+    }
+
+    res.json({ success: true, message: "Valid token." });
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    res.status(400).json({ success: false, message: "Invalid or expired token." });
+  }
+};
+
+//resetToken Generation
+// export const getResetToken = async (req, res) => {
+//   const { id } = req.params;
+
+//   try {
+//     const user = await User.findById(id);
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: "User not found." });
+//     }
+
+//     // Generate token
+//     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "15m" });
+
+//     res.json({ success: true, token });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: "Internal server error" });
+//   }
+// };
+
