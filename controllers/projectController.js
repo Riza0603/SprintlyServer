@@ -33,6 +33,7 @@ export const createProject = async (req, res) => {
   }
 };
 
+
 export const fetchProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find();
@@ -42,3 +43,75 @@ export const fetchProjects = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// New function to fetch only project id and name
+export const fetchProjectNames = async (req, res) => {
+  try {
+    const projects = await ProjectModel.find({}, "_id pname"); // Fetch only _id and pname
+
+    // Format response
+    const formattedProjects = projects.map((project) => ({
+      id: project._id,
+      name: project.pname,
+    }));
+
+    res.status(200).json(formattedProjects);
+  } catch (err) {
+    console.error("Error in fetchProjectNames:", err.message);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// Update global notification settings
+export const updateGlobalSettings = async (req, res) => {
+  const { notifyInApp, notifyEmail } = req.body;
+
+  try {
+    // Update all projects' settings in bulk
+    await ProjectModel.updateMany({}, { notifyinApp: notifyInApp, notifyemail: notifyEmail });
+
+    return res.status(200).json({
+      message: "Global settings updated successfully",
+      notifyInApp,
+      notifyEmail,
+    });
+  } catch (error) {
+    console.error("Error updating global settings:", error);
+    return res.status(500).json({
+      message: "Error updating global settings",
+      error: error.message,
+    });
+  }
+};
+
+// Update notification settings for a specific project
+export const updateProjectSettings = async (req, res) => {
+  const { projectId } = req.params;
+  const { notifyInApp, notifyEmail } = req.body;
+
+  try {
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { notifyinApp: notifyInApp, notifyemail: notifyEmail },
+      { new: true }
+    );
+
+    if (!updatedProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    return res.status(200).json({
+      message: "Project settings updated successfully",
+      updatedProject,
+    });
+  } catch (error) {
+    console.error("Error updating project settings:", error);
+    return res.status(500).json({
+      message: "Error updating project settings",
+      error: error.message,
+    });
+  }
+};
+
