@@ -14,5 +14,4 @@ const connectDB = async () => {
   }
 };
 
-// Export using ES module syntax
 export default connectDB;

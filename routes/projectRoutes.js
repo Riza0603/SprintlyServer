@@ -4,6 +4,6 @@ import { createProject, fetchProjects } from "../controllers/projectController.j
 const router = express.Router();
 
 router.post("/createProject", createProject);
-router.get("/fetchProject", fetchProjects);
+router.get("/fetchProjects", fetchProjects);
 
 export default router;
