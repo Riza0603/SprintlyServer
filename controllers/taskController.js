@@ -1,7 +1,7 @@
-const TaskModel = require("../models/taskModel");
+import TaskModel from "../models/Tasks.js";
 
 // Add Task API
-exports.addTask = async (req, res) => {
+export const addTask = async (req, res) => {
   try {
     const taskData = {
       title: req.body.title,
@@ -27,7 +27,7 @@ exports.addTask = async (req, res) => {
 };
 
 // Fetch Tasks API
-exports.getTasks = async (req, res) => {
+export const getTasks = async (req, res) => {
   try {
     const tasks = await TaskModel.find(); // Fetch all tasks
     res.status(200).json(tasks);
