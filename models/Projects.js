@@ -1,8 +1,15 @@
 import mongoose from "mongoose";
+import { v4 as uuidv4 } from "uuid";
+
+// const MemberSchema = new mongoose.Schema({
+//   name: { type: String, required: true },
+// }, { _id: true }); // Enable automatic _id generation
+ 
 
 const MemberSchema = new mongoose.Schema({
   name: { type: String, required: true },
-}, { _id: true }); // Enable automatic _id generation
+  position:{type:String,default:"Employee"} 
+}); 
 
 const ProjectSchema = new mongoose.Schema({
   pname: String,
