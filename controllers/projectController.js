@@ -1,19 +1,28 @@
 import ProjectModel from "../models/Projects.js";
+import mongoose from "mongoose";
 
 export const createProject = async (req, res) => {
-  const { pname, pdescription, pstart, pend } = req.body;
+  const { pname, pdescription, pstart, pend,members } = req.body;
 
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
   }
 
   try {
-    const project = await ProjectModel.create({
-      pname,
-      pdescription,
-      pstart,
-      pend,
-    });
+    // Check if a project with the same name already exists
+    const existingProject = await ProjectModel.findOne({ pname });
+
+    if (existingProject) {
+      return res.status(400).json({
+        message: "Project with the same name already exists",
+      });
+    }
+    const formattedMembers = members
+      ? members.map((name) => ({ _id: new mongoose.Types.ObjectId(), name }))
+      : [];
+
+    // Create the new project
+    const project = await ProjectModel.create({ pname, pdescription, pstart, pend , members: formattedMembers});
 
     return res.status(201).json({
       message: "Project created successfully",

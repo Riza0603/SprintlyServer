@@ -17,5 +17,6 @@ connectDB();
 app.use("/auth", authRoutes);
 app.use("/api", projectRoute);
 app.use("/api", taskRoutes);
+app.use("/api",authRoutes)
 
 app.listen(5000, () => console.log("Server has started"));
