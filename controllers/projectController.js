@@ -44,24 +44,6 @@ export const fetchProjects = async (req, res) => {
   }
 };
 
-// New function to fetch only project id and name
-export const fetchProjectNames = async (req, res) => {
-  try {
-    const projects = await ProjectModel.find({}, "_id pname"); // Fetch only _id and pname
-
-    // Format response
-    const formattedProjects = projects.map((project) => ({
-      id: project._id,
-      name: project.pname,
-    }));
-
-    res.status(200).json(formattedProjects);
-  } catch (err) {
-    console.error("Error in fetchProjectNames:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-};
-
 
 
 // Update global notification settings
