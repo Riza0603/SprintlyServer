@@ -79,3 +79,23 @@ export const getComments=async(req,res)=>{
     res.status(500).json({message:error.message});
   }
 }
+
+export const updateStatus=async(req,res)=>{
+  try {
+    const { taskId, status } = req.body;
+    if (!taskId || !status) {
+      return res.status(400).json({ message: "Task ID and status required" });
+    }
+
+    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status }, { new: true });
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.json({ message: "Task status updated", task: updatedTask });
+  } catch (error) {
+    console.error("Error updating task:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
