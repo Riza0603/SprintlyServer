@@ -1,4 +1,5 @@
 import ProjectModel from "../models/Projects.js";
+import UserModel from "../models/User.js";
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid"; 
 
@@ -19,7 +20,13 @@ export const createProject = async (req, res) => {
       });
     }
    
-    const membersWithIds = members.map((memberName) => ({ name: memberName }));
+    const membersWithIds = members.map((member) => ({
+      _id: member._id, 
+      name: member.name,
+      email:member.email,
+      position: member.position || "Employee", 
+    }));;
+    console.log(membersWithIds)
 
 
     // Create the new project
@@ -43,6 +50,7 @@ export const fetchProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find();
     res.status(200).json(projects);
+   
   } catch (err) {
     console.error("Error in fetchProjects:", err.message);
     res.status(500).json({ message: err.message });
@@ -133,6 +141,7 @@ export const getMembers=async(req,res)=>{
   }
 }
 
+//Project specific delete
 export const deleteMember= async (req,res)=>{
   try{
     const memberId=req.params.memberId;
@@ -150,10 +159,10 @@ export const deleteMember= async (req,res)=>{
 
 export const addMember=async (req,res)=>{
   try{
-    const {projectName,name,position}=req.body;
-    console.log(projectName,name,position)
+    const {_id,projectName,name,position}=req.body;
+  
     const project= await ProjectModel.findOneAndUpdate({pname:projectName},
-      {$push:{members:{name,position}}},
+      {$push:{members:{_id,name,position}}},
       { new: true } 
     )
     res.status(200).json(project)
@@ -161,3 +170,23 @@ export const addMember=async (req,res)=>{
     res.status(500).json({ message: 'Error adding member', error: err });
   }
 }
+
+//delete from both user and project table
+export const deleteUser= async (req,res)=>{
+  try{
+    const memberId=req.params.memberId;
+    const updateProject= await ProjectModel.findOneAndUpdate({"members._id":memberId},
+      {$pull:{members:{_id:memberId}}},
+    );
+
+    const updateUser = await UserModel.findByIdAndDelete(memberId);
+    if(!updateProject){
+      return res.status(404).json({ message: "Member not found in project" });
+    }
+    res.status(200).json({ message: "Member deleted successfully" });
+  }catch(err){
+    res.status(500).json({ message: "Error deleting member", err });
+  }
+}
+
+
