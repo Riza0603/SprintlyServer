@@ -4,8 +4,8 @@ import { createProject, fetchProjects, fetchProjectNames,updateGlobalSettings,  
 const router = express.Router();
 
 router.post("/createProject", createProject);
-router.get("/fetchProjects", fetchProjects);
-router.get("/fetchProjectNames", fetchProjectNames);
+router.get("/fetchProjects",fetchProjects);
+router.get("/fetchProjectNames",fetchProjectNames);
 
 router.patch("/updateGlobalSettings", updateGlobalSettings);
 router.patch("/updateProjectSettings/:projectId", updateProjectSettings);
