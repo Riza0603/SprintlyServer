@@ -6,9 +6,12 @@ import mongoose from "mongoose";
  
 
 const MemberSchema = new mongoose.Schema({
+  _id: { type: mongoose.Schema.Types.ObjectId, required: true }, // Store member ID
   name: { type: String, required: true },
-  position:{type:String,default:"Employee"} 
-}); 
+  email:{type:String,required:true},
+  position: { type: String, default: "Employee" },
+});
+
 
 const ProjectSchema = new mongoose.Schema({
   pname: String,
