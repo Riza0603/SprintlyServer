@@ -1,8 +1,14 @@
 import mongoose from "mongoose";
 
+// const MemberSchema = new mongoose.Schema({
+//   name: { type: String, required: true },
+// }, { _id: true }); // Enable automatic _id generation
+ 
+
 const MemberSchema = new mongoose.Schema({
   name: { type: String, required: true },
-}, { _id: true }); // Enable automatic _id generation
+  position:{type:String,default:"Employee"} 
+}); 
 
 const ProjectSchema = new mongoose.Schema({
   pname: String,

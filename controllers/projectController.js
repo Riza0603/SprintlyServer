@@ -1,6 +1,7 @@
 import ProjectModel from "../models/Projects.js";
 import mongoose from "mongoose";
 
+
 export const createProject = async (req, res) => {
   const { pname, pdescription, pstart, pend,members } = req.body;
 
@@ -17,12 +18,12 @@ export const createProject = async (req, res) => {
         message: "Project with the same name already exists",
       });
     }
-    const formattedMembers = members
-      ? members.map((name) => ({ _id: new mongoose.Types.ObjectId(), name }))
-      : [];
+   
+    const membersWithIds = members.map((memberName) => ({ name: memberName }));
+
 
     // Create the new project
-    const project = await ProjectModel.create({ pname, pdescription, pstart, pend , members: formattedMembers});
+    const project = await ProjectModel.create({ pname, pdescription, pstart, pend , members: membersWithIds,});
 
     return res.status(201).json({
       message: "Project created successfully",
@@ -119,3 +120,44 @@ export const updateProjectSettings = async (req, res) => {
   }
 };
 
+
+export const getMembers=async(req,res)=>{
+  try{
+    const projName=req.params.projectName;
+    const projects=await ProjectModel.findOne({pname:projName})
+    
+    res.status(200).json(projects.members)
+  }catch(error){
+    console.log("error in getMembers",error.message)
+    res.status(500).json({ message: error.message });
+  }
+}
+
+export const deleteMember= async (req,res)=>{
+  try{
+    const memberId=req.params.memberId;
+    const updateProject= await ProjectModel.findOneAndUpdate({"members._id":memberId},
+      {$pull:{members:{_id:memberId}}},
+    );
+    if(!updateProject){
+      return res.status(404).json({ message: "Member not found in project" });
+    }
+    res.status(200).json({ message: "Member deleted successfully" });
+  }catch(err){
+    res.status(500).json({ message: "Error deleting member", err });
+  }
+}
+
+export const addMember=async (req,res)=>{
+  try{
+    const {projectName,name,position}=req.body;
+    console.log(projectName,name,position)
+    const project= await ProjectModel.findOneAndUpdate({pname:projectName},
+      {$push:{members:{name,position}}},
+      { new: true } 
+    )
+    res.status(200).json(project)
+  }catch(err){
+    res.status(500).json({ message: 'Error adding member', error: err });
+  }
+}
