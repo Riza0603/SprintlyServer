@@ -12,6 +12,7 @@ export const addTask = async (req, res) => {
       priority: req.body.priority || "None",
       startDate: req.body.startDate || null,
       endDate: req.body.endDate || null,
+      createdBy: req.body.createdBy || null,
       comments: req.body.comments || [],
     };
 
