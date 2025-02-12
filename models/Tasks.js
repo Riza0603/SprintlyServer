@@ -11,8 +11,10 @@ const TaskSchema = new mongoose.Schema({
   endDate: { type: Date, default: null },
   createdBy: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
+  
   comments: [
     {
+      _id: { type: mongoose.Schema.Types.ObjectId, auto: true }, // Unique ID for each comment
       username: { type: String, required: true },
       text: { type: String, required: true },
       createdAt: { type: Date, default: Date.now },
