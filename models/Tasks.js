@@ -10,7 +10,7 @@ const TaskSchema = new mongoose.Schema({
   priority: { type: String, default: "None" },
   startDate: { type: Date, default: null },
   endDate: { type: Date, default: null },
-  createdBy: { type: String, default: "None" },
+  createdBy: { type: String, default: null },
   createdAt: { type: Date, default: Date.now },
   
   comments: [
