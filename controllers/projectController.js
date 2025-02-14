@@ -1,7 +1,5 @@
 import ProjectModel from "../models/Projects.js";
 import UserModel from "../models/User.js";
-import mongoose from "mongoose";
-import { v4 as uuidv4 } from "uuid"; 
 
 export const createProject = async (req, res) => {
   const { pname, pdescription, pstart, pend,members } = req.body;
@@ -11,7 +9,7 @@ export const createProject = async (req, res) => {
   }
 
   try {
-    // Check if a project with the same name already exists
+    // Check if a project with the same name already exists 
     const existingProject = await ProjectModel.findOne({ pname });
 
     if (existingProject) {
@@ -45,10 +43,11 @@ export const createProject = async (req, res) => {
   }
 };
 
-
+//fetches the projects
 export const fetchProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find();
+    console.log("Projects from DB:", projects); // Debugging log
     res.status(200).json(projects);
    
   } catch (err) {
@@ -57,23 +56,6 @@ export const fetchProjects = async (req, res) => {
   }
 };
 
-// New function to fetch only project id and name
-export const fetchProjectNames = async (req, res) => {
-  try {
-    const projects = await ProjectModel.find({}, "_id pname"); // Fetch only _id and pname
-
-    // Format response
-    const formattedProjects = projects.map((project) => ({
-      id: project._id,
-      name: project.pname,
-    }));
-
-    res.status(200).json(formattedProjects);
-  } catch (err) {
-    console.error("Error in fetchProjectNames:", err.message);
-    res.status(500).json({ message: err.message });
-  }
-};
 
 
 

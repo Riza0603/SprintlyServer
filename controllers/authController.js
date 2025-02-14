@@ -27,7 +27,7 @@ export const login = async (req, res) => {
 
       if (isValidPassword) {
         // Generate JWT Token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h"});
 
         res.json({
           success: true,
@@ -253,6 +253,15 @@ export const getUser = async (req, res) => {
   }
 };
 
+//get the list of all users
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("name email experience role reportTo"); // Fetch all users
+    res.json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching users", error });
+  }
+};
 
 export const updateUser = async (req, res) => {
   try{
