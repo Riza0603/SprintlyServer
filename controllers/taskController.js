@@ -9,6 +9,7 @@ export const addTask = async (req, res) => {
       description: req.body.description,
       projectName: req.body.projectName || "None",
       assignee: req.body.assignee || "Unassigned",
+      assigneeId: req.body.assigneeId,
       status: req.body.status || "No Progress",
       priority: req.body.priority || "None",
       createdBy:req.body.createdBy|| "None",
@@ -45,20 +46,27 @@ export const addComment=async(req,res)=>{
   try{
     const {taskId}=req.params;
     
-    const {username,text}=req.body;
+    const {userId,username,text}=req.body;
     if (!username || !text) {
       return res.status(400).json({ message: "Username and text are required." });
   }
   const newComment={
     _id:new mongoose.Types.ObjectId(),
+    userId: new mongoose.Types.ObjectId(userId),
     username,
     text,
     
   };
-  const task= await TaskModel.findById(taskId)
-  task.comments.push(newComment);
-  await task.save();
-  res.status(201).json({ message: "Comment added successfully", comment: newComment });
+  
+  
+
+  await TaskModel.updateOne(
+    { _id: taskId },
+    { $push: { comments: newComment } }
+  );
+
+  
+  res.status(201).json({ message: "Comment added successfully" });
 
 
   }catch(error){
@@ -99,3 +107,23 @@ export const updateStatus=async(req,res)=>{
     res.status(500).json({ message: "Server error" });
   }
 }
+
+
+export const deleteComment = async (req, res) => {
+  const { taskId, commentId } = req.params; // Expect taskId to find the task
+  try {
+    const updateTask = await TaskModel.findOneAndUpdate(
+      { _id: taskId }, // Find the task by taskId, not commentId
+      { $pull: { comments: { _id: commentId } } }, // Remove the comment from the comments array
+      { new: true } // Return updated document
+    );
+
+    if (!updateTask) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    res.status(200).json({ message: "Comment deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Error deleting comment", error: err });
+  }
+};

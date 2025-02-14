@@ -181,7 +181,7 @@ export const deleteUser= async (req,res)=>{
 
     const updateUser = await UserModel.findByIdAndDelete(memberId);
     if(!updateProject){
-      return res.status(404).json({ message: "Member not found in project" });
+      return res.status(404).json({ message: "Member not found in project",  });
     }
     res.status(200).json({ message: "Member deleted successfully" });
   }catch(err){

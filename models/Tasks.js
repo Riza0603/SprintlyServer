@@ -5,6 +5,7 @@ const TaskSchema = new mongoose.Schema({
   description: { type: String, required: true },
   projectName: { type: String, default: "None" },
   assignee: { type: String, default: "Unassigned" },
+  assigneeId: { type: mongoose.Schema.Types.ObjectId, required: true  },
   status: { type: String, default: "No Progress" },
   priority: { type: String, default: "None" },
   startDate: { type: Date, default: null },
@@ -14,7 +15,8 @@ const TaskSchema = new mongoose.Schema({
   
   comments: [
     {
-      _id: { type: mongoose.Schema.Types.ObjectId, auto: true }, // Unique ID for each comment
+      _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+      userId: {  type: mongoose.Schema.Types.ObjectId, required: true ,ref: "registers"}, 
       username: { type: String, required: true },
       text: { type: String, required: true },
       createdAt: { type: Date, default: Date.now },
