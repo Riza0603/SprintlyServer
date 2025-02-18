@@ -6,12 +6,12 @@ import { v4 as uuidv4 } from "uuid";
 // }, { _id: true }); // Enable automatic _id generation
  
 
-const MemberSchema = new mongoose.Schema({
-  _id: { type: mongoose.Schema.Types.ObjectId, required: true }, // Store member ID
-  name: { type: String, required: true },
-  email:{type:String,required:true},
-  position: { type: String, default: "Employee" },
-});
+// const MemberSchema = new mongoose.Schema({
+//   _id: { type: mongoose.Schema.Types.ObjectId, required: true }, // Store member ID
+//   name: { type: String, required: true },
+//   email:{type:String,required:true},
+//   position: { type: String, default: "Employee" },
+// });
 
 
 const ProjectSchema = new mongoose.Schema({
@@ -19,7 +19,7 @@ const ProjectSchema = new mongoose.Schema({
   pdescription: String,
   pstart: Date,
   pend: Date,
-  members: { type: [MemberSchema], default: [] },
+  members: {type: [mongoose.Schema.Types.ObjectId],default:[] ,ref:"registers"}, 
   pstatus: { type: String, default: "In-Progress" },
   notifyinApp: { type: Boolean, default: true },
   notifyemail: { type: Boolean, default: true },
