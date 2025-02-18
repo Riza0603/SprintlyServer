@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: { type: String , default: "Employee"},
     experience: { type: String , default: "N/A"},
+    projects: { type: [String], default: [] } ,
     reportTo: { type: String, default: "N/A" },
     isVerified: { type: Boolean, default: false },
   },

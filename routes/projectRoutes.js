@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.post("/createProject", createProject);
 router.post("/fetchProjects", fetchProjects);
-router.post("/members/:projectName",getMembers);
+router.post("/getMembers/:projectName",getMembers);
 router.post("/addMember",addMember);
 // router.post("/getAllMembers",fetchAllMembers)
 router.delete("/deleteMember/:memberId",deleteMember);

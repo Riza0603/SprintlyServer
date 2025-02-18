@@ -1,9 +1,13 @@
 import mongoose from "mongoose";
 import TaskModel from "../models/Tasks.js";
+import UserModel from "../models/User.js";
 
 // Add Task API
 export const addTask = async (req, res) => {
+  
   try {
+    const { title, description, projectName, assignee, assigneeId, status, priority, createdBy, startDate, endDate, completedOn, comments } = req.body;
+
     const taskData = {
       title: req.body.title,
       description: req.body.description,
@@ -11,14 +15,16 @@ export const addTask = async (req, res) => {
       assignee: req.body.assignee || "Unassigned",
       assigneeId: req.body.assigneeId,
       status: req.body.status || "No Progress",
-      priority: req.body.priority || "None",
-      createdBy:req.body.createdBy|| "None",
+      priority: req.body.priority || "Low",
+      createdBy:req.body.createdBy,
+      createdById:req.body.createdById,
       startDate: req.body.startDate || null,
       endDate: req.body.endDate || null,
-      createdBy: req.body.createdBy || null,
+      
+      completedOn:req.body.CompletedOn||null,
       comments: req.body.comments || [],
     };
-
+    
     // Save Task
     const task = new TaskModel(taskData);
     await task.save();
@@ -47,19 +53,24 @@ export const addComment=async(req,res)=>{
   try{
     const {taskId}=req.params;
     
-    const {userId,username,text}=req.body;
-    if (!username || !text) {
+    const {userId,text}=req.body;
+    if (!userId || !text) {
       return res.status(400).json({ message: "Username and text are required." });
   }
+
+  // const user= await UserModel.findById(userId);
+  // if (!user) {
+  //   return res.status(404).json({ message: "User not found." });
+  // }
+
   const newComment={
     _id:new mongoose.Types.ObjectId(),
     userId: new mongoose.Types.ObjectId(userId),
-    username,
+    username:user.name,
     text,
     
   };
-  
-  
+  console.log(newComment)
 
   await TaskModel.updateOne(
     { _id: taskId },
@@ -89,14 +100,20 @@ export const getComments=async(req,res)=>{
   }
 }
 
+
+//toggle between in-progress and completed
 export const updateStatus=async(req,res)=>{
   try {
     const { taskId, status } = req.body;
     if (!taskId || !status) {
       return res.status(400).json({ message: "Task ID and status required" });
     }
+    let completedOn = null;
+    if (status === "Completed") {
+      completedOn = new Date(); 
+    }
 
-    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status }, { new: true });
+    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status,completedOn}, { new: true });
 
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
@@ -116,7 +133,7 @@ export const deleteComment = async (req, res) => {
     const updateTask = await TaskModel.findOneAndUpdate(
       { _id: taskId }, 
       { $pull: { comments: { _id: commentId } } }, 
-      { new: true } // Return updated document
+      { new: true } 
     );
 
     if (!updateTask) {
