@@ -7,28 +7,27 @@ export const createProject = async (req, res) => {
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
   }
-
   try {
     // Check if a project with the same name already exists 
     const existingProject = await ProjectModel.findOne({ pname });
-
     if (existingProject) {
       return res.status(400).json({
         message: "Project with the same name already exists",
       });
     }
    
-    const membersWithIds = members.map((member) => ({
-      _id: member._id, 
-      name: member.name,
-      email:member.email,
-      position: member.position || "Employee", 
-    }));;
-    console.log(membersWithIds)
+    const project = await ProjectModel.create({ pname, pdescription, pstart, pend , members});
 
-
-    // Create the new project
-    const project = await ProjectModel.create({ pname, pdescription, pstart, pend , members: membersWithIds,});
+    //add project to user table
+    await Promise.all(
+      members.map(async (memberId) => {
+        await UserModel.findByIdAndUpdate(
+          memberId,
+          { $addToSet: { projects: pname } }, 
+          { new: true }
+        );
+      })
+    );
 
     return res.status(201).json({
       message: "Project created successfully",
@@ -47,9 +46,7 @@ export const createProject = async (req, res) => {
 export const fetchProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find();
-    console.log("Projects from DB:", projects); // Debugging log
     res.status(200).json(projects);
-   
   } catch (err) {
     console.error("Error in fetchProjects:", err.message);
     res.status(500).json({ message: err.message });
@@ -110,27 +107,28 @@ export const updateProjectSettings = async (req, res) => {
   }
 };
 
-
+//get members
 export const getMembers=async(req,res)=>{
   try{
     const projName=req.params.projectName;
-    const projects=await ProjectModel.findOne({pname:projName})
+    const members=await UserModel.find({projects:projName})
     
-    res.status(200).json(projects.members)
+    res.status(200).json(members)
   }catch(error){
     console.log("error in getMembers",error.message)
     res.status(500).json({ message: error.message });
   }
 }
 
-//Project specific delete
+//delete member from specific project
 export const deleteMember= async (req,res)=>{
   try{
     const memberId=req.params.memberId;
-    const updateProject= await ProjectModel.findOneAndUpdate({"members._id":memberId},
-      {$pull:{members:{_id:memberId}}},
+    const { projectName } = req.body;
+    const updateMember= await UserModel.findOneAndUpdate({"_id":memberId},
+      { $pull: { projects: projectName } }, 
     );
-    if(!updateProject){
+    if(!updateMember){
       return res.status(404).json({ message: "Member not found in project" });
     }
     res.status(200).json({ message: "Member deleted successfully" });
@@ -139,15 +137,16 @@ export const deleteMember= async (req,res)=>{
   }
 }
 
+//add members to project
 export const addMember=async (req,res)=>{
   try{
-    const {_id,projectName,name,position}=req.body;
+    const {_id,projectName,position}=req.body;
   
-    const project= await ProjectModel.findOneAndUpdate({pname:projectName},
-      {$push:{members:{_id,name,position}}},
-      { new: true } 
-    )
-    res.status(200).json(project)
+    const member= await UserModel.findByIdAndUpdate(_id,{
+      $addToSet:{projects:projectName},
+      role:position},
+      { new: true });
+    res.status(200).json(member)
   }catch(err){
     res.status(500).json({ message: 'Error adding member', error: err });
   }
