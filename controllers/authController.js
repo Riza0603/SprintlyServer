@@ -188,6 +188,7 @@ export const signup = async (req, res) => {
   }
 };
 
+//verify that the OTP is correct
 export const verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
   try {
@@ -219,6 +220,7 @@ export const verifyOTP = async (req, res) => {
   }
 };
 
+//get the user details
 export const getUser = async (req, res) => {
   console.log("Received request for user:", req.params.email);
 
@@ -263,6 +265,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+//update the user details
 export const updateUser = async (req, res) => {
   try{
     const { email, name, experience, role, reportTo } = req.body;
@@ -324,3 +327,15 @@ export const getUsers = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+//fetchById
+export const fetchById = async (req, res) => {
+  try {
+    const { memberIds } = req.body;
+    const members = await User.find({ '_id': { $in: memberIds } });
+    res.json(members);
+  } catch (error) {
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+

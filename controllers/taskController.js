@@ -111,11 +111,11 @@ export const updateStatus=async(req,res)=>{
 
 
 export const deleteComment = async (req, res) => {
-  const { taskId, commentId } = req.params; // Expect taskId to find the task
+  const { taskId, commentId } = req.params; 
   try {
     const updateTask = await TaskModel.findOneAndUpdate(
-      { _id: taskId }, // Find the task by taskId, not commentId
-      { $pull: { comments: { _id: commentId } } }, // Remove the comment from the comments array
+      { _id: taskId }, 
+      { $pull: { comments: { _id: commentId } } }, 
       { new: true } // Return updated document
     );
 
@@ -128,3 +128,19 @@ export const deleteComment = async (req, res) => {
     res.status(500).json({ message: "Error deleting comment", error: err });
   }
 };
+
+// Fetch Tasks by Project Name API
+export const fetchTask = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+    const tasks = await TaskModel.find({ projectName });
+
+    // Instead of returning a 404 error, return an empty array
+    res.json(tasks.length ? tasks : []);
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+

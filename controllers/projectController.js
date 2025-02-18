@@ -47,7 +47,6 @@ export const createProject = async (req, res) => {
 export const fetchProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find();
-    console.log("Projects from DB:", projects); // Debugging log
     res.status(200).json(projects);
    
   } catch (err) {
