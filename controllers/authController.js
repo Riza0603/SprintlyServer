@@ -6,6 +6,7 @@ import UserOtpVerification from "../models/UserOtpVerification.js";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import UserModel from "../models/User.js";
+import TaskModel from "../models/Tasks.js";
 
 //errorHandler
 const handleErrors = (err, res) => {
@@ -248,7 +249,7 @@ export const getUser = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    console.log("User found:", JSON.stringify(user, null, 2)); // Better logging
+    
     res.json({ success: true, user });
   } catch (error) {
     handleErrors(error, res); // Pass error to the error handler
@@ -268,11 +269,16 @@ export const getAllUsers = async (req, res) => {
 //update the user details
 export const updateUser = async (req, res) => {
   try{
-    const { email, name, experience, role, reportTo } = req.body;
-    const user = await User.findOneAndUpdate({ email }, { name, experience, role, reportTo }, { new: true });
+    const { id,email, name, experience, role, reportTo} = req.body;
+    
+    const user = await User.findOneAndUpdate({ _id:id }, { name, email,experience, role, reportTo }, { new: true });
     if(!user){
       return res.status(404).json({ success: false, message: "User not found" });
     }
+
+// Update username in comments where userId matches
+await TaskModel.updateMany({ "comments.userId": id }, { $set: { "comments.$[].username": name } });
+
     res.json({ success: true, user });
   }catch(error){
     console.error("Error updating user:", error);
