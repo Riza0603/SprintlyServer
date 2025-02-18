@@ -1,24 +1,33 @@
 import ProjectModel from "../models/Projects.js";
+import UserModel from "../models/User.js";
 
 export const createProject = async (req, res) => {
-  const { pname, pdescription, pstart, pend } = req.body;
+  const { pname, pdescription, pstart, pend,members } = req.body;
 
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
   }
-
   try {
-    // Check if a project with the same name already exists
+    // Check if a project with the same name already exists 
     const existingProject = await ProjectModel.findOne({ pname });
-
     if (existingProject) {
       return res.status(400).json({
         message: "Project with the same name already exists",
       });
     }
+   
+    const project = await ProjectModel.create({ pname, pdescription, pstart, pend , members});
 
-    // Create the new project
-    const project = await ProjectModel.create({ pname, pdescription, pstart, pend });
+    //add project to user table
+    await Promise.all(
+      members.map(async (memberId) => {
+        await UserModel.findByIdAndUpdate(
+          memberId,
+          { $addToSet: { projects: pname } }, 
+          { new: true }
+        );
+      })
+    );
 
     return res.status(201).json({
       message: "Project created successfully",
@@ -33,7 +42,7 @@ export const createProject = async (req, res) => {
   }
 };
 
-
+//fetches the projects
 export const fetchProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find();
@@ -43,6 +52,7 @@ export const fetchProjects = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 
 
@@ -96,4 +106,68 @@ export const updateProjectSettings = async (req, res) => {
     });
   }
 };
+
+//get members
+export const getMembers=async(req,res)=>{
+  try{
+    const projName=req.params.projectName;
+    const members=await UserModel.find({projects:projName})
+    
+    res.status(200).json(members)
+  }catch(error){
+    console.log("error in getMembers",error.message)
+    res.status(500).json({ message: error.message });
+  }
+}
+
+//delete member from specific project
+export const deleteMember= async (req,res)=>{
+  try{
+    const memberId=req.params.memberId;
+    const { projectName } = req.body;
+    const updateMember= await UserModel.findOneAndUpdate({"_id":memberId},
+      { $pull: { projects: projectName } }, 
+    );
+    if(!updateMember){
+      return res.status(404).json({ message: "Member not found in project" });
+    }
+    res.status(200).json({ message: "Member deleted successfully" });
+  }catch(err){
+    res.status(500).json({ message: "Error deleting member", err });
+  }
+}
+
+//add members to project
+export const addMember=async (req,res)=>{
+  try{
+    const {_id,projectName,position}=req.body;
+  
+    const member= await UserModel.findByIdAndUpdate(_id,{
+      $addToSet:{projects:projectName},
+      role:position},
+      { new: true });
+    res.status(200).json(member)
+  }catch(err){
+    res.status(500).json({ message: 'Error adding member', error: err });
+  }
+}
+
+//delete from both user and project table
+export const deleteUser= async (req,res)=>{
+  try{
+    const memberId=req.params.memberId;
+    const updateProject= await ProjectModel.findOneAndUpdate({"members._id":memberId},
+      {$pull:{members:{_id:memberId}}},
+    );
+
+    const updateUser = await UserModel.findByIdAndDelete(memberId);
+    if(!updateProject){
+      return res.status(404).json({ message: "Member not found in project",  });
+    }
+    res.status(200).json({ message: "Member deleted successfully" });
+  }catch(err){
+    res.status(500).json({ message: "Error deleting member", err });
+  }
+}
+
 
