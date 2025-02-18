@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { stringify } from "uuid";
 
 const TaskSchema = new mongoose.Schema({
   title: { type: String, required: true },
@@ -19,6 +20,7 @@ const TaskSchema = new mongoose.Schema({
       userId: {  type: mongoose.Schema.Types.ObjectId, required: true ,ref: "registers"}, 
       username: { type: String, required: true },
       text: { type: String, required: true },
+      attachments: [{ type: String }],
       createdAt: { type: Date, default: Date.now },
     },
   ],
