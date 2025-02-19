@@ -53,8 +53,8 @@ export const addComment=async(req,res)=>{
   try{
     const {taskId}=req.params;
     
-    const {userId,text}=req.body;
-    if (!userId || !text) {
+    const {username,text,userId}=req.body;
+    if (!username || !text) {
       return res.status(400).json({ message: "Username and text are required." });
   }
 
@@ -66,7 +66,7 @@ export const addComment=async(req,res)=>{
   const newComment={
     _id:new mongoose.Types.ObjectId(),
     userId: new mongoose.Types.ObjectId(userId),
-    username:user.name,
+    username:username,
     text,
     
   };
