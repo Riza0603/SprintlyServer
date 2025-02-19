@@ -1,10 +1,14 @@
 import mongoose from "mongoose";
 import TaskModel from "../models/Tasks.js";
 import axios from 'axios';
+import UserModel from "../models/User.js";
 
 // Add Task API
 export const addTask = async (req, res) => {
+  
   try {
+    const { title, description, projectName, assignee, assigneeId, status, priority, createdBy, startDate, endDate, completedOn, comments } = req.body;
+
     const taskData = {
       title: req.body.title,
       description: req.body.description,
@@ -12,14 +16,16 @@ export const addTask = async (req, res) => {
       assignee: req.body.assignee || "Unassigned",
       assigneeId: req.body.assigneeId,
       status: req.body.status || "No Progress",
-      priority: req.body.priority || "None",
-      createdBy: req.body.createdBy || "None",
+      priority: req.body.priority || "Low",
+      createdBy: req.body.createdBy ,
+      createdById:req.body.createdById,
       startDate: req.body.startDate || null,
       endDate: req.body.endDate || null,
-      createdBy: req.body.createdBy || null,
+      
+      completedOn:req.body.CompletedOn||null,
       comments: req.body.comments || [],
     };
-
+    
     // Save Task
     const task = new TaskModel(taskData);
     await task.save();
@@ -114,8 +120,12 @@ export const updateStatus = async (req, res) => {
     if (!taskId || !status) {
       return res.status(400).json({ message: "Task ID and status required" });
     }
+    let completedOn = null;
+    if (status === "Completed") {
+      completedOn = new Date(); 
+    }
 
-    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status }, { new: true });
+    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status,completedOn}, { new: true });
 
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not found" });
@@ -189,3 +199,19 @@ export const deleteComment = async (req, res) => {
     res.status(500).json({ message: "Error deleting comment", error: err });
   }
 };
+
+// Fetch Tasks by Project Name API
+export const fetchTask = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+    const tasks = await TaskModel.find({ projectName });
+
+    // Instead of returning a 404 error, return an empty array
+    res.json(tasks.length ? tasks : []);
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+

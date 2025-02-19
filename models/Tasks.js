@@ -3,15 +3,17 @@ import { stringify } from "uuid";
 
 const TaskSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  description: { type: String, required: true },
+  description: { type: String },
   projectName: { type: String, default: "None" },
   assignee: { type: String, default: "Unassigned" },
-  assigneeId: { type: mongoose.Schema.Types.ObjectId, required: true  },
+  assigneeId: { type: mongoose.Schema.Types.ObjectId, default:null  },
   status: { type: String, default: "No Progress" },
-  priority: { type: String, default: "None" },
+  priority: { type: String, default: "Low" },
   startDate: { type: Date, default: null },
   endDate: { type: Date, default: null },
   createdBy: { type: String, default: null },
+  createdById:{type: mongoose.Schema.Types.ObjectId, default:null},
+  completedOn:{type:Date,default:null},
   createdAt: { type: Date, default: Date.now },
   
   comments: [
