@@ -140,14 +140,14 @@ export const resetPassword = async (req, res) => {
 //regisration
 export const signup = async (req, res) => {
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const { name, email, password } = req.body;
+  const { name, email, password, phone } = req.body;
 
   try {
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ success: false, message: "Email already exists." });
 
     const hashedOTP = await bcrypt.hash(verificationCode, 10);
-    const newUser = await User.create({ name, email, password });
+    const newUser = await User.create({ name, email, password,phone });
 
     await new UserOtpVerification({ userId: newUser._id, email, otp: hashedOTP, expiresAt: Date.now() + 3600000 }).save();
 
