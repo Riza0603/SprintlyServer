@@ -14,7 +14,13 @@ const TaskSchema = new mongoose.Schema({
   createdById:{type: mongoose.Schema.Types.ObjectId, default:null},
   completedOn:{type:Date,default:null},
   createdAt: { type: Date, default: Date.now },
-  
+  subTasks: [
+    {
+      _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+      title: { type: String, required: true },
+      status: { type: String, default: "No Progress" },
+    },
+  ],
   comments: [
     {
       _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
