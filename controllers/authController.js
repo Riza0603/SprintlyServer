@@ -323,7 +323,7 @@ export const verifyToken = async (req, res) => {
 export const getUsers = async (req, res) => {
   try {
     
-    const users = await User.find({}, "-password");  // Exclude passwords for security
+    const users = await User.find({}, "-password");  
     res.status(200).json(users);
   } catch (err) {
     console.error("Error in getUsers:", err.message);
