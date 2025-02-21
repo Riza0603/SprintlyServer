@@ -109,23 +109,19 @@ export const resetPassword = async (req, res) => {
   const { password } = req.body;
 
   try {
-    console.log("Verifying token...");
     const decoded = jwt.verify(token, "jwt_secret_key");
 
     if (!decoded || decoded.id !== id) {
       return res.status(400).json({ success: false, message: "Invalid or expired reset token." });
     }
 
-    console.log("Token verified. Checking user...");
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
 
-    console.log("User found. Hashing new password...");
     const hashedPassword = await argon2.hash(password);
 
-    console.log("Updating user password...");
     await User.findByIdAndUpdate(id, { password: hashedPassword });
 
     res.json({ success: true, message: "Password updated successfully." });
@@ -223,11 +219,9 @@ export const verifyOTP = async (req, res) => {
 
 //get the user details
 export const getUser = async (req, res) => {
-  console.log("Received request for user:", req.params.email);
 
   const { email } = req.params;
   const token = req.headers.authorization?.split(" ")[1]; // Extract Bearer token
-  console.log("Token:", token);
 
   if (!token) {
     return res.status(401).json({ success: false, message: "Unauthorized: No token provided" });
@@ -235,7 +229,6 @@ export const getUser = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Token verified:", decoded);
   } catch (err) {
     console.log("Invalid token");
     return res.status(401).json({ success: false, message: "Invalid token" });
@@ -334,14 +327,5 @@ export const getUsers = async (req, res) => {
   }
 };
 
-//fetchById
-export const fetchById = async (req, res) => {
-  try {
-    const { memberIds } = req.body;
-    const members = await User.find({ '_id': { $in: memberIds } });
-    res.json(members);
-  } catch (error) {
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
-};
+
 

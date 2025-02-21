@@ -1,5 +1,5 @@
 import express from "express";
-import { login, forgotPassword, resetPassword, signup, verifyOTP, getUser, updateUser, getAllUsers, getUsers, fetchById} from "../controllers/authController.js";
+import { login, forgotPassword, resetPassword, signup, verifyOTP, getUser, updateUser, getAllUsers, getUsers} from "../controllers/authController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -13,7 +13,6 @@ router.post("/getUser/:email",verifyToken, getUser); //checking whether token va
 router.post("/updateUser", updateUser);
 router.get("/getUsers", getUsers);
 router.get("/getAllUsers", getAllUsers);
-router.post("/members", fetchById);
 //router.get('/verify-token/:id/:token', verifyToken);
 //router.get("/get-reset-token/:id", getResetToken);
 export default router;
