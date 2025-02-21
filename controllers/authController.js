@@ -303,7 +303,7 @@ export const verifyToken = async (req, res) => {
 
 // export const getUsers = async (req, res) => {
 //   try {
-c//     console.log("Fetching all users...");  // Debugging
+//     console.log("Fetching all users...");  // Debugging
 //     const users = await User.find({}, "-password");  // Exclude passwords for security
 //     res.status(200).json(users);
 //   } catch (err) {
