@@ -256,6 +256,7 @@ export const updateSubTaskStatus=async(req,res)=>{
 
     if (totalSubTasks===completedSubTasksLength) {
       updatedTask.status = "Completed";
+      updatedTask.completedOn=new Date();
     }else if(completedSubTasksLength>0){
       updatedTask.status="In-Progress";
     }else{
