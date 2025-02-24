@@ -1,8 +1,9 @@
 import ProjectModel from "../models/Projects.js";
+import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
 
 export const createProject = async (req, res) => {
-  const { pname, pdescription, pstart, pend,members } = req.body;
+  const { pname, pdescription,projectCreatedBy, pstart, pend,members } = req.body;
 
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
@@ -16,7 +17,8 @@ export const createProject = async (req, res) => {
       });
     }
    
-    const project = await ProjectModel.create({ pname, pdescription, pstart, pend , members});
+    console.log(projectCreatedBy)
+    const project = await ProjectModel.create({ pname, pdescription,projectCreatedBy, pstart, pend , members});
 
     //add project to user table
     await Promise.all(
@@ -125,6 +127,15 @@ export const deleteMember= async (req,res)=>{
   try{
     const memberId=req.params.memberId;
     const { projectName } = req.body;
+    const updateProject = await ProjectModel.findOneAndUpdate(
+      { pname: projectName }, 
+      { $pull: { members: memberId } },
+      { new: true } 
+    );
+
+    if (!updateProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
     const updateMember= await UserModel.findOneAndUpdate({"_id":memberId},
       { $pull: { projects: projectName } }, 
     );
@@ -141,7 +152,17 @@ export const deleteMember= async (req,res)=>{
 export const addMember=async (req,res)=>{
   try{
     const {_id,projectName,position}=req.body;
-  
+    const project= await ProjectModel.findOneAndUpdate({pname:projectName},
+      {$addToSet:{members:_id},
+    new:true
+  }
+      
+      
+    );
+    if(!project){
+      return res.status(404).json({message:"proj failed"})
+    }
+
     const member= await UserModel.findByIdAndUpdate(_id,{
       $addToSet:{projects:projectName},
       role:position},
@@ -170,4 +191,63 @@ export const deleteUser= async (req,res)=>{
   }
 }
 
+//To  calculate workload per member
+export const fetchDetails = async (req, res) => {
+  try {
+    const { pname } = req.query;
 
+    const users = await UserModel.find({ projects: pname });
+    if (!users || users.length === 0) return res.status(404).json({ message: "Project not found" });
+
+    const memberNames = users.map((user) => user.name);
+
+    const tasks = await TaskModel.find({ assignee: { $in: memberNames }, projectName: pname });
+
+    // Edge case: No tasks found
+    if (tasks.length === 0) {
+      return res.json({
+        projectName: pname,
+        members: users.map((user) => ({
+          id: user._id,
+          name: user.name,
+          workload: 0,
+          workloadPercentage: 0,
+        })),
+      });
+    }
+
+    const totalTasks = tasks.length; 
+    let totalWeightSum = 0; 
+
+    const workloadData = users.map((user) => {
+      const userTasks = tasks.filter((task) => task.assignee === user.name);
+
+      const workloadScore = userTasks.reduce((total, task) => {
+        const priorityWeight = task.priority === "High" ? 3 : task.priority === "Medium" ? 2 : 1;
+        return total + priorityWeight;}, 0);
+
+      const weight = totalTasks > 0 ? workloadScore / totalTasks : 0;
+      totalWeightSum += weight;
+
+      return { id: user._id, name: user.name, workloadScore, weight };
+    });
+
+    const finalWorkloadData = workloadData.map((member) => {
+      const workloadPercentage = totalWeightSum > 0 ? Math.round((member.weight / totalWeightSum) * 100) : 0;
+
+      return { 
+        id: member.id, 
+        name: member.name, 
+        workload: member.workloadScore, 
+        workloadPercentage: parseFloat(workloadPercentage)
+      };
+    });
+
+    finalWorkloadData.sort((a, b) => b.workloadPercentage - a.workloadPercentage);
+
+    res.json({ projectName: pname, members: finalWorkloadData });
+  } catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};

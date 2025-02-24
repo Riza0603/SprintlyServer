@@ -116,23 +116,19 @@ export const resetPassword = async (req, res) => {
   const { password } = req.body;
 
   try {
-    console.log("Verifying token...");
     const decoded = jwt.verify(token, "jwt_secret_key");
 
     if (!decoded || decoded.id !== id) {
       return res.status(400).json({ success: false, message: "Invalid or expired reset token." });
     }
 
-    console.log("Token verified. Checking user...");
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
 
-    console.log("User found. Hashing new password...");
     const hashedPassword = await argon2.hash(password);
 
-    console.log("Updating user password...");
     await User.findByIdAndUpdate(id, { password: hashedPassword });
 
     res.json({ success: true, message: "Password updated successfully." });
