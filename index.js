@@ -1,8 +1,8 @@
-import express from "express";
-import cors from "cors";
-import connectDB from "./config/db.js";
 import bodyParser from "body-parser";
-import authRoutes from "./routes/authRoutes.js";  
+import cors from "cors";
+import express from "express";
+import connectDB from "./config/db.js";
+import authRoutes from "./routes/authRoutes.js";
 import projectRoute from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 

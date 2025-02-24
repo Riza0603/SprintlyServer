@@ -20,7 +20,7 @@ export const addTask = async (req, res) => {
       createdById:req.body.createdById,
       startDate: req.body.startDate || null,
       endDate: req.body.endDate || null,
-      
+      visibility: req.body.visibility || "public",
       completedOn:req.body.CompletedOn||null,
       comments: req.body.comments || [],
     };
@@ -215,8 +215,8 @@ export const updateSubTask= async (req,res)=>{
 export const updateTask=async(req,res)=>{
   try{
     const {taskId}=req.params;
-    const {title,description,assignee,assigneeId,status,priority,startDate,endDate}=req.body;
-    const updatedTask=await TaskModel.findByIdAndUpdate(taskId,{title,description,assignee,assigneeId,status,priority,startDate,endDate},
+    const {title,description,assignee,assigneeId,status,priority,startDate,endDate,visibility}=req.body;
+    const updatedTask=await TaskModel.findByIdAndUpdate(taskId,{title,description,assignee,assigneeId,status,priority,startDate,visibility,endDate},
       {new:true}
     )
     if(!updatedTask){
