@@ -176,14 +176,11 @@ export const fetchDetails = async (req, res) => {
   try {
     const { pname } = req.query;
 
-    // Fetch project members
     const users = await UserModel.find({ projects: pname });
     if (!users || users.length === 0) return res.status(404).json({ message: "Project not found" });
 
-    // Extract member names
     const memberNames = users.map((user) => user.name);
 
-    // Fetch tasks assigned to project members for the given project
     const tasks = await TaskModel.find({ assignee: { $in: memberNames }, projectName: pname });
 
     // Edge case: No tasks found
@@ -199,16 +196,15 @@ export const fetchDetails = async (req, res) => {
       });
     }
 
-    const totalTasks = tasks.length; // Total number of tasks in the project
-    let totalWeightSum = 0; // Sum of all weights
+    const totalTasks = tasks.length; 
+    let totalWeightSum = 0; 
 
     const workloadData = users.map((user) => {
       const userTasks = tasks.filter((task) => task.assignee === user.name);
 
       const workloadScore = userTasks.reduce((total, task) => {
         const priorityWeight = task.priority === "High" ? 3 : task.priority === "Medium" ? 2 : 1;
-        return total + priorityWeight;
-      }, 0);
+        return total + priorityWeight;}, 0);
 
       const weight = totalTasks > 0 ? workloadScore / totalTasks : 0;
       totalWeightSum += weight;
@@ -217,9 +213,7 @@ export const fetchDetails = async (req, res) => {
     });
 
     const finalWorkloadData = workloadData.map((member) => {
-      const workloadPercentage = totalWeightSum > 0
-  ? Math.round((member.weight / totalWeightSum) * 100)
-  : 0;
+      const workloadPercentage = totalWeightSum > 0 ? Math.round((member.weight / totalWeightSum) * 100) : 0;
 
       return { 
         id: member.id, 
@@ -229,7 +223,6 @@ export const fetchDetails = async (req, res) => {
       };
     });
 
-    // Sort in descending order of workload percentage
     finalWorkloadData.sort((a, b) => b.workloadPercentage - a.workloadPercentage);
 
     res.json({ projectName: pname, members: finalWorkloadData });
