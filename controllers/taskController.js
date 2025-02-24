@@ -141,6 +141,8 @@ export const addsubTask = async (req, res) => {
   try {
     const { taskId } = req.params;
     const { title } = req.body;
+
+
     const newSubTask = {
       _id: new mongoose.Types.ObjectId(),
       title,
@@ -149,7 +151,12 @@ export const addsubTask = async (req, res) => {
     const updateFields = {
       $push: { subTasks: newSubTask },
     };
-    // Update status ONLY if first subtask is being added
+
+    const task = await TaskModel.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    //change to no progress when a subtask is added
     if (task.subTasks.length === 0) {
       updateFields.$set = { status: "No Progress" };
     }
@@ -242,6 +249,22 @@ export const updateSubTaskStatus=async(req,res)=>{
     if(!updatedTask){
       return res.status(404).json({message:"Subtask not found"})
     }
+
+    const totalSubTasks=updatedTask.subTasks.length;
+    const completedSubTasksLength=updatedTask.subTasks.filter(subtask=>subtask.status==="Completed").length;
+    
+
+    if (totalSubTasks===completedSubTasksLength) {
+      updatedTask.status = "Completed";
+      updatedTask.completedOn=new Date();
+    }else if(completedSubTasksLength>0){
+      updatedTask.status="In-Progress";
+    }else{
+      updatedTask.status="No Progress";
+    }
+    await updatedTask.save();
+    
+
     res.status(200).json(updatedTask);
   }catch(err){
     res.status(500).json({message:"Server error in updateSubTaskStatus()",error:err.message})
