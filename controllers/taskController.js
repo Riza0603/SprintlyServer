@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { trusted } from "mongoose";
 import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
 
@@ -57,30 +57,18 @@ export const addComment=async(req,res)=>{
     if (!username || !text) {
       return res.status(400).json({ message: "Username and text are required." });
   }
-
-  // const user= await UserModel.findById(userId);
-  // if (!user) {
-  //   return res.status(404).json({ message: "User not found." });
-  // }
-
   const newComment={
     _id:new mongoose.Types.ObjectId(),
     userId: new mongoose.Types.ObjectId(userId),
     username:username,
     text,
-    
   };
   console.log(newComment)
-
   await TaskModel.updateOne(
     { _id: taskId },
     { $push: { comments: newComment } }
   );
-
-  
   res.status(201).json({ message: "Comment added successfully" });
-
-
   }catch(error){
     res.status(500).json({ message: "Server error", error: error.message });
 
@@ -143,6 +131,154 @@ export const deleteComment = async (req, res) => {
     res.status(200).json({ message: "Comment deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: "Error deleting comment", error: err });
+  }
+};
+
+
+
+
+export const addsubTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { title } = req.body;
+
+
+    const newSubTask = {
+      _id: new mongoose.Types.ObjectId(),
+      title,
+    };
+
+    const updateFields = {
+      $push: { subTasks: newSubTask },
+    };
+
+    const task = await TaskModel.findById(taskId);
+    if (!task) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+    //change to no progress when a subtask is added
+    if (task.subTasks.length === 0) {
+      updateFields.$set = { status: "No Progress" };
+    }
+    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, updateFields, { new: true });
+    res.status(200).json({ message: "Subtask added successfully", updatedTask });
+  } catch (error) {
+    console.error("Error adding subtask:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+
+
+export const getSubTasks= async(req,res)=>{
+  try{
+    const {taskId}=req.params;
+    const tasks= await TaskModel.findById(taskId)
+    res.status(200).json(tasks.subTasks)
+  }catch(error){
+    res.status(500).json({message:"Server error in getSubTasks()",error:error.message})
+  }
+}
+
+export const deleteSubTask= async(req,res)=>{
+  try{
+    const {taskId,subTaskId}=req.params;
+    const updateTask=await TaskModel.findOneAndUpdate(
+      {_id:taskId},
+      {$pull:{subTasks:{_id:subTaskId}}},
+      {new:true}
+    )
+    
+    if(!updateTask){
+      return res.status(404).json({message:"Task not found"})
+    }
+    res.status(200).json({message:"Subtask deleted successfully"})
+  }
+  catch(error){
+    res.status(500).json({message:"Server error in deleteSubTask()",error:error.message})
+  }
+}
+
+export const updateSubTask= async (req,res)=>{
+  try{
+    const {taskId,subTaskId}=req.params;
+    const {title,status}=req.body;
+    
+    const updateTask=await TaskModel.findOneAndUpdate(
+      {_id:taskId,"subTasks._id":subTaskId},
+      {$set:{"subTasks.$.title":title}},
+      {new:true},
+
+    )
+    if(!updateTask){
+      return res.status(404).json({message:"Task not found"})
+    }
+    res.status(200).json(updateSubTask);
+  }catch(error){
+    res.status(500).json({message:"Server error in updateSubTask()",error:error.message})
+  }
+}
+
+export const updateTask=async(req,res)=>{
+  try{
+    const {taskId}=req.params;
+    const {title,description,assignee,assigneeId,status,priority,startDate,endDate}=req.body;
+    const updatedTask=await TaskModel.findByIdAndUpdate(taskId,{title,description,assignee,assigneeId,status,priority,startDate,endDate},
+      {new:true}
+    )
+    if(!updatedTask){
+      return res.status(404).json({message:"Task not found"})
+    }
+    res.status(200).json(updatedTask)
+
+  }catch(error){
+    res.status(500).json({message:"Server error in updateTask()",error:error.message})
+  }
+}
+
+//update subtask status
+export const updateSubTaskStatus=async(req,res)=>{
+  try{
+    const {subTaskId}=req.params;
+    const {status}=req.body;
+    const updatedTask=await TaskModel.findOneAndUpdate(
+      {"subTasks._id":subTaskId},
+      {$set:{"subTasks.$.status":status}},
+      {new:true}
+    )
+    if(!updatedTask){
+      return res.status(404).json({message:"Subtask not found"})
+    }
+
+    const totalSubTasks=updatedTask.subTasks.length;
+    const completedSubTasksLength=updatedTask.subTasks.filter(subtask=>subtask.status==="Completed").length;
+    
+
+    if (totalSubTasks===completedSubTasksLength) {
+      updatedTask.status = "Completed";
+      updatedTask.completedOn=new Date();
+    }else if(completedSubTasksLength>0){
+      updatedTask.status="In-Progress";
+    }else{
+      updatedTask.status="No Progress";
+    }
+    await updatedTask.save();
+    
+
+    res.status(200).json(updatedTask);
+  }catch(err){
+    res.status(500).json({message:"Server error in updateSubTaskStatus()",error:err.message})
+  }
+}
+
+export const importTasks = async (req, res) => {
+  try {
+    const tasks = req.body.tasks;
+    const insertedTasks = await TaskModel.insertMany(tasks);  
+    res.json({ importedTasks: insertedTasks });
+  } catch (err) {
+    console.error("Error importing tasks:", err); // Log detailed error to server console
+    res.status(500).json({ message: err.message });
   }
 };
 

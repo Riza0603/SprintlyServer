@@ -3,7 +3,7 @@ import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
 
 export const createProject = async (req, res) => {
-  const { pname, pdescription, pstart, pend,members } = req.body;
+  const { pname, pdescription,projectCreatedBy, pstart, pend,members } = req.body;
 
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
@@ -17,7 +17,8 @@ export const createProject = async (req, res) => {
       });
     }
    
-    const project = await ProjectModel.create({ pname, pdescription, pstart, pend , members});
+    console.log(projectCreatedBy)
+    const project = await ProjectModel.create({ pname, pdescription,projectCreatedBy, pstart, pend , members});
 
     //add project to user table
     await Promise.all(
@@ -126,6 +127,15 @@ export const deleteMember= async (req,res)=>{
   try{
     const memberId=req.params.memberId;
     const { projectName } = req.body;
+    const updateProject = await ProjectModel.findOneAndUpdate(
+      { pname: projectName }, 
+      { $pull: { members: memberId } },
+      { new: true } 
+    );
+
+    if (!updateProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
     const updateMember= await UserModel.findOneAndUpdate({"_id":memberId},
       { $pull: { projects: projectName } }, 
     );
@@ -142,7 +152,17 @@ export const deleteMember= async (req,res)=>{
 export const addMember=async (req,res)=>{
   try{
     const {_id,projectName,position}=req.body;
-  
+    const project= await ProjectModel.findOneAndUpdate({pname:projectName},
+      {$addToSet:{members:_id},
+    new:true
+  }
+      
+      
+    );
+    if(!project){
+      return res.status(404).json({message:"proj failed"})
+    }
+
     const member= await UserModel.findByIdAndUpdate(_id,{
       $addToSet:{projects:projectName},
       role:position},
