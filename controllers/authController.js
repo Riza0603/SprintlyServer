@@ -360,7 +360,7 @@ export const resendOTP = async (req, res) => {
       userId: user._id,
       email,
       otp: hashedOtp,
-      expiresAt: Date.now() + 60000, 
+      expiresAt: Date.now() + 240000, 
     });
 
     await otpRecord.save();
