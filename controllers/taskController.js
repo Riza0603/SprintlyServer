@@ -281,3 +281,19 @@ export const importTasks = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Fetch Tasks by Project Name API
+export const fetchTask = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+    const tasks = await TaskModel.find({ projectName });
+
+    // Instead of returning a 404 error, return an empty array
+    res.json(tasks.length ? tasks : []);
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+
