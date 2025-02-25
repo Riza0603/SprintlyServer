@@ -18,6 +18,7 @@ const ProjectSchema = new mongoose.Schema({
   pdescription: String,
   pstart: Date,
   pend: Date,
+  projectCreatedBy:{type:mongoose.Schema.Types.ObjectId},
   members: {type: [mongoose.Schema.Types.ObjectId],default:[] ,ref:"registers"}, 
   pstatus: { type: String, default: "In-Progress" },
   notifyinApp: { type: Boolean, default: true },
