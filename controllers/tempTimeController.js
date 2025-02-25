@@ -89,3 +89,24 @@ export const stopTimer = async (req, res) => {
         res.status(400).json({ message: err.message });
     }
     }
+
+// In your timeController.js
+// Updated endpoint: GET /api/fetchTime/:userId
+export const fetchTimeEntries = async (req, res) => {
+  try {
+    const userId  = req.params.userId; // Get userId from URL parameters
+    // Find the timesheet document for that specific user
+    const timeSheetDoc = await TimeSheetModel.findOne({ userId });
+    if (!timeSheetDoc) {
+      return res.status(404).json({ message: "No timesheet found for this user." });
+    }
+
+    // Return the flattened timeSheet array (if you want to work directly with entries)
+    res.status(200).json(timeSheetDoc.timeSheet);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+  
+  
