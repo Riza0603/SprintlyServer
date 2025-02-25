@@ -16,12 +16,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Pre-save middleware for hashing passwords
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await argon2.hash(this.password);
-  next();
-});
+
 
 const UserModel = mongoose.model("register", userSchema);
 export default UserModel; 

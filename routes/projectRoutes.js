@@ -1,10 +1,11 @@
 import express from "express";
-import { createProject, fetchProjects,updateGlobalSettings,  updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName, fetchDetails } from "../controllers/projectController.js";
+import { createProject, fetchProjects,updateGlobalSettings,  updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName, fetchDetails, fetchProjectsById } from "../controllers/projectController.js";
 
 const router = express.Router();
 
 router.post("/createProject", createProject);
 router.post("/fetchProjects", fetchProjects);
+router.post("/fetchProjectsById", fetchProjectsById);
 router.post("/getProject/:projectTitle",getProjectByName);
 router.post("/getMembers/:projectName",getMembers);
 router.post("/addMember",addMember);
