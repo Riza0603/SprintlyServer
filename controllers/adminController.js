@@ -7,7 +7,7 @@ dotenv.config();
 
 
 // Fetch all users
-export const getAllUsers = async (req, res) => {
+export const getAllUsers = async (req, res) => { 
   try {
     const users = await UserModel.find({}, "-password"); // Exclude passwords for security
     res.status(200).json({ success: true, users });
@@ -17,7 +17,7 @@ export const getAllUsers = async (req, res) => {
 };
 
 
-
+// Fetching all Projects
 export const getAllProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find(); 
@@ -27,5 +27,20 @@ export const getAllProjects = async (req, res) => {
   }
 };
 
+// Fetching Counts of Ongoing and Completed Projects
+export const getProjectCounts = async (req, res) => {
+  try {
+      
+      const ongoingProjectsCount = await ProjectModel.countDocuments({ pstatus: 'In-Progress' });
+      const completedProjectsCount = await ProjectModel.countDocuments({ pstatus: 'completed' });
 
+      // Send the counts as JSON response
+      res.status(200).json({
+          ongoingProjectsCount,
+          completedProjectsCount,
+      });
+  } catch (err) {
+      res.status(500).json({ message: "Error retrieving project counts", error: err.message });
+  }
+};
 
