@@ -23,7 +23,7 @@ export const createProject = async (req, res) => {
      membersMap[memberId] = {
        notifyinApp: true,
        notifyinEmail: true,
-       position: "Employee",
+       position: memberId === projectCreatedBy?"Project Manager":"Employee",
      };
    });
 
