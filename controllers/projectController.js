@@ -163,16 +163,15 @@ export const deleteMember= async (req,res)=>{
 export const addMember=async (req,res)=>{
   try{
     const {_id,projectName,position}=req.body;
-    const project= await ProjectModel.findOneAndUpdate({pname:projectName},
-      {$addToSet:{members:_id},
-    new:true
-  }
-      
-      
-    );
-    if(!project){
-      return res.status(404).json({message:"proj failed"})
-    }
+    console.log(_id,projectName,position)
+  //   const project= await ProjectModel.findOneAndUpdate({pname:projectName},
+  //     {$addToSet:{members:_id},
+  //   new:true
+  // }
+  //   );
+    // if(!project){
+    //   return res.status(404).json({message:"proj failed"})
+    // }
 
     const member= await UserModel.findByIdAndUpdate(_id,{
       $addToSet:{projects:projectName},
