@@ -3,7 +3,6 @@ import TimeSheetModel from "../models/TimeSheets.js";
 
 
 export const startTimer = async (req, res) => {
-    console.log("Timer Started ", req.body);
     try {
         const { userId, startTime, elapsedTime, breakTime } = req.body;
     
@@ -22,28 +21,23 @@ export const startTimer = async (req, res) => {
     
         res.status(201).json(tempTime); // Return the saved tempTime
     } catch (err) {
-        console.error("Error in addTempTime:", err.message);
         res.status(400).json({ message: err.message });
     }
     };
 
 export const getTime = async (req, res) => {
-    console.log("req recieved ",req.body.date);
     try {
         const tempTime = await TempTimeModel.findOne
         ({ userId: req.body.userId, date:req.body.date});
         const time = Date.now()-tempTime.startTime-tempTime.breakTime;
         
-        console.log("Time fetched ",time,tempTime.started);
         res.status(200).json({time,started:tempTime.started}); // Return the saved tempTime
     }
     catch (err) {
-        console.error("Error in getTime:", err.message);
         res.status(400).json({ message: err.message });
     }
     };
 export const stopTimer = async (req, res) => {
-    console.log("Timer Stopped ", req.body);
     try {
         const tempTime = await TempTimeModel.findOneAndUpdate({userId:req.body.userId,date:req.body.date},{elapsedTime:req.body.elapsedTime,started:false},{new:true});
         if (!tempTime) {
@@ -85,7 +79,6 @@ export const stopTimer = async (req, res) => {
 
         res.status(201).json(tempTime); // Return the saved tempTime
     } catch (err) {
-        console.error("Error in addTempTime:", err.message);
         res.status(400).json({ message: err.message });
     }
     }
