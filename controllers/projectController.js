@@ -1,7 +1,6 @@
 import ProjectModel from "../models/Projects.js";
 import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
-import transporter from "../config/emailTransporter.js";
 
 export const createProject = async (req, res) => {
   const { pname, pdescription,projectCreatedBy, pstart, pend,members } = req.body;
