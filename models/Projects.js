@@ -20,10 +20,15 @@ const ProjectSchema = new mongoose.Schema({
   pstart: Date,
   pend: Date,
   projectCreatedBy:{type:mongoose.Schema.Types.ObjectId},
-  members: {type: [mongoose.Schema.Types.ObjectId],default:[] ,ref:"registers"}, 
+  members: {
+    type: Map, // Use a Map to store objectId as key and notify details as value
+    of: new mongoose.Schema({
+      notifyinApp: { type: Boolean, default: true },
+      notifyinEmail: { type: Boolean, default: true },
+      position : { type: String, default: "Employee" },
+    }, { _id: false }) 
+  },
   pstatus: { type: String, default: "In-Progress" },
-  notifyinApp: { type: Boolean, default: true },
-  notifyemail: { type: Boolean, default: true },
 });
 
 const ProjectModel = mongoose.model("Projects", ProjectSchema);

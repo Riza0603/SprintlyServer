@@ -14,6 +14,7 @@ const TaskSchema = new mongoose.Schema({
   createdById:{type: mongoose.Schema.Types.ObjectId, default:null},
   completedOn:{type:Date,default:null},
   createdAt: { type: Date, default: Date.now },
+  visibility : { type: String, default:'public' },
   subTasks: [
     {
       _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
@@ -27,7 +28,6 @@ const TaskSchema = new mongoose.Schema({
       userId: {  type: mongoose.Schema.Types.ObjectId, required: true ,ref: "registers"}, 
       username: { type: String, required: true },
       text: { type: String, required: true },
-
       createdAt: { type: Date, default: Date.now },
     },
   ],
