@@ -33,14 +33,25 @@ export const uploadFileToS3 = async (file) => {
 
     console.log(`Uploading file: ${fileName} with Content-Type: ${file.mimetype}`);
 
-    await s3.send(new PutObjectCommand(params));
-    return fileName; // Return the uploaded file name
+    const a = await s3.send(new PutObjectCommand(params));
+
+
+    
+   console.log("file uploaded and this is the resposnse",a);
+
+    const url = await getPresignedUrl(fileName);
+    console.log("signedURl is : ", url);
+
+
+
+    return {fileName, url}; // Return the uploaded file name
 };
 
 
 
 
 export const deleteFilesFromS3 = async (fileUrls) => {
+    console.log("fileName:", fileUrls)
     if (!fileUrls || fileUrls.length === 0) return;
 
     const deleteParams = {

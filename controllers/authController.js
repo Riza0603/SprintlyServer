@@ -5,7 +5,7 @@ import transporter from "../config/emailTransporter.js";
 import UserOtpVerification from "../models/UserOtpVerification.js";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
-import UserModel from "../models/User.js";
+//import UserModel from "../models/User.js";
 import TaskModel from "../models/Tasks.js";
 
 //errorHandler
@@ -28,7 +28,7 @@ export const login = async (req, res) => {
 
       if (isValidPassword) {
         // Generate JWT Token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h"});
+        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "5h"});
 
         res.json({
           success: true,
@@ -242,7 +242,7 @@ export const getUser = async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email }).select("name email experience role reportTo"); // Explicitly select fields
+    const user = await User.findOne({ email }).select("name email experience role reportTo profilePicUrl"); // Explicitly select fields
 
     if (!user) {
       console.log("User not found:", email);
@@ -269,22 +269,76 @@ export const getAllUsers = async (req, res) => {
 //update the user details
 export const updateUser = async (req, res) => {
   try{
-    const { id,email, name, experience, role, reportTo} = req.body;
+
     
-    const user = await User.findOneAndUpdate({ _id:id }, { name, email,experience, role, reportTo }, { new: true });
-    if(!user){
+    const userId = req.user.id; // Get user ID from the authenticated session
+    const updatedUserData = req.body;
+    console.log("userId", userId);
+    console.log("profile data ", updatedUserData);
+
+    const { id,email, name, experience, role, reportTo, profilePicUrl} = req.body;
+    
+    const user = await User.findOneAndUpdate({ _id:id }, { name, email,experience, role, reportTo, profilePicUrl }, { new: true });
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updatedUserData, { new: true });
+
+
+    if(!updatedUser){
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
 // Update username in comments where userId matches
 await TaskModel.updateMany({ "comments.userId": id }, { $set: { "comments.$[].username": name } });
 
-    res.json({ success: true, user });
+    res.json({ success: true, updatedUser });
   }catch(error){
     console.error("Error updating user:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+
+
+
+
+
+export const updateUserProfilePic = async (req, res) => {
+  const { email, profilePicUrl } = req.body;
+console.log(profilePicUrl);
+  try {
+    const user = await User.findOneAndUpdate(
+      { email: email },
+      { profilePicUrl: profilePicUrl }, // Updating the profilePicUrl field
+      { new: true }
+    );
+    console.log("user data: ", user);
+
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({ success: true, message: "Profile picture updated successfully!", user });
+  } catch (error) {
+    console.error("Error updating profile picture:", error);
+    res.status(500).json({ success: false, message: "Error updating profile picture" });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //verify-token
 export const verifyToken = async (req, res) => {

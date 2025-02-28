@@ -15,7 +15,8 @@ import { uploadFileToS3, deleteFilesFromS3, getPresignedUrl} from "../config/S3f
 
 // });
 
-export const uploadFiles = async (req, res) => {
+
+export const uploadP = async (req, res) => {
     try {
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: "No files uploaded" });
@@ -33,14 +34,57 @@ export const uploadFiles = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+export const uploadFiles = async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: "No files uploaded" });
+        }
+
+        const uploadedFiles = await Promise.all(req.files.map(uploadFileToS3));
+
+        res.status(200).json({ message: "Files uploaded successfully!", urls: uploadedFiles });
+
+    } catch (error) {
+        console.error("Error uploading files: ", error);
+        res.status(500).json({ error: "Error uploading files" });
+    }
+};
+
+// export const uploadProfilePic = async (req, res) => {
+//     try{
+
+//     }
+//     catch(error){
+
+//     }
+// }
+
+
+
 export const getPresignedUrls = async (req, res) => {
     try {
         const { fileName } = req.params;
+        console.log("fileName", fileName);
         if (!fileName) {
             return res.status(400).json({ error: "No fileName provided" });
         }
 
         const presignedUrl = await getPresignedUrl(fileName);
+        console.log("pp:",presignedUrl);
         res.status(200).json({ presignedUrl });
 
     } catch (error) {
@@ -55,8 +99,25 @@ export const getPresignedUrls = async (req, res) => {
 
 
 
-export const deleteTaskCommentFiles = async (req, res) => {
+
+
+export const deleteFilesS3 = async (req, res) => {
     const { fileUrls } = req.body;
+    console.log("firl: ", fileUrls);
+
+
+
+    if (Array.isArray(fileUrls)) {
+        // Safe to use .map() here
+        fileUrls.map((url) => {
+          // your logic here
+        });
+      } else {
+        console.error("fileUrls is not an array:", fileUrls);
+      }
+      
+
+
 
     if (!fileUrls || fileUrls.length === 0) {
         return res.status(400).json({ error: "No files provided" });

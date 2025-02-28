@@ -54,6 +54,115 @@ export const fetchProjects = async (req, res) => {
 };
 
 
+export const getProjectFiles = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    if (!projectId) return res.status(400).json({ error: "Project ID is required" });
+
+    const project = await ProjectModel.findById(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    console.log("project attachments", project.pAttachments);
+    res.status(200).json({ files: project.pAttachments });
+  } catch (error) {
+    console.error("Error fetching project files:", error);
+    res.status(500).json({ error: "Failed to fetch project files" });
+  }
+}
+
+
+export const fetchProjectData = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    // Find the project by ID
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json(project);
+  } catch (error) {
+    console.error("Error fetching project data:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
+
+export const updateProjectDeletedFile = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { removeAttachment } = req.body;
+
+    if (!removeAttachment) {
+      return res.status(400).json({ message: "Filename to remove is required." });
+    }
+
+    // Use `$pull` to remove the specified filename from `pAttachments`
+    const updatedProject = await ProjectModel.findOneAndUpdate(
+      { _id: projectId },
+      { $pull: { pAttachments: removeAttachment } }, // Remove the specific file
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json({ message: "File removed successfully", updatedProject });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
+
+
+
+
+
+
+export const updateProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { newAttachment, ...updateData } = req.body;
+    console.log(projectId, newAttachment);
+
+    if (!projectId) return res.status(400).json({ error: "Project ID is required" });
+
+    const project = await ProjectModel.findById(projectId);
+
+    console.log("project:",project);
+
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    // Append new attachment to existing pAttachments
+
+    const updateFields = {};
+
+    if (newAttachment) {
+      updateFields.$push = { pAttachments: newAttachment };  // Add new attachment to pAttachments
+    }
+    const updatedProject = await ProjectModel.findOneAndUpdate(
+      { _id: projectId },
+      updateFields,
+      { new: true }  // `new: true` returns the updated document
+    );
+
+    
+
+    res.status(200).json({ message: "Project updated successfully", updatedProject });
+  } catch (error) {
+    console.error("Update project error:", error);
+    res.status(500).json({ error: "Failed to update project" });
+  }
+};
+
+
 
 
 // Update global notification settings

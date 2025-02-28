@@ -86,7 +86,7 @@ export const addComment = async (req, res) => {
     // await task.save();
 
     await TaskModel.updateOne(
-      { _id: taskId },
+      { _id:taskId },
       { $push: { comments: newComment } }
     );
 
@@ -165,7 +165,7 @@ export const deleteComment = async (req, res) => {
 
     if (fileUrls.length > 0) {
       try {
-        const dataa=await axios.delete("http://localhost:5000/api/deleteTaskCommentFiles", {
+        const dataa=await axios.delete("http://localhost:5000/api/deleteFilesS3", {
           data: { fileUrls },
         });
 
