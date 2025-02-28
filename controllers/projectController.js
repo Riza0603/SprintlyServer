@@ -9,8 +9,8 @@ export const createProject = async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
   try {
-    // Check if a project with the same name already exists 
-    const existingProject = await ProjectModel.findOne({ pname });
+    const existingProject = await ProjectModel.findOne({ pname })
+    .collation({ locale: "en", strength: 2 });  //case insesitive search
     if (existingProject) {
       return res.status(400).json({
         message: "Project with the same name already exists",
