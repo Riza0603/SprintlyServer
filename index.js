@@ -1,11 +1,13 @@
-import express from "express";
-import cors from "cors";
-import connectDB from "./config/db.js";
 import bodyParser from "body-parser";
-import authRoutes from "./routes/authRoutes.js";  
+import cors from "cors";
+import express from "express";
+import connectDB from "./config/db.js";
+import authRoutes from "./routes/authRoutes.js";
 import projectRoute from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+
+import tempTimeRoutes from "./routes/tempTimeRoutes.js";
 
 
 const app = express();  // Initialize app before using it
@@ -24,5 +26,6 @@ app.use("/api", uploadRoutes);
 
 
 
+app.use("/api",tempTimeRoutes)
 
 app.listen(5000, () => console.log("Server has started"));
