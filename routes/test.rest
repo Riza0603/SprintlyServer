@@ -1,6 +1,20 @@
-GET http://localhost:5000/admin/projectCount
-Content-Type: "application/json"
+# GET  http://localhost:5000/admin/get_all_projects
+# Content-Type: application/json
+
+# {
+    
+# }
+
+POST http://localhost:5000/request/create_user_addition_request
+Content-Type: application/json
 
 {
-
+    "userID": "67a6ec74a5016c52f38f0ce5"
 }
+
+# GET http://localhost:5000/request/get_all_requests
+# Content-Type: application/json
+
+# {
+    
+# }
