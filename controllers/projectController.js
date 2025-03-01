@@ -9,8 +9,8 @@ export const createProject = async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
   try {
-    // Check if a project with the same name already exists 
-    const existingProject = await ProjectModel.findOne({ pname });
+    const existingProject = await ProjectModel.findOne({ pname })
+    .collation({ locale: "en", strength: 2 });  //case insesitive search
     if (existingProject) {
       return res.status(400).json({
         message: "Project with the same name already exists",
@@ -23,7 +23,7 @@ export const createProject = async (req, res) => {
      membersMap[memberId] = {
        notifyinApp: true,
        notifyinEmail: true,
-       position: memberId === projectCreatedBy?"Project Manager":"Employee",
+       position: memberId === projectCreatedBy ? "Project Manager" : "Employee",
      };
    });
 
@@ -267,6 +267,9 @@ export const getMembers=async(req,res)=>{
     res.status(500).json({ message: error.message });
   }
 }
+
+
+
 
 //delete member from specific project
 export const deleteMember= async (req,res)=>{

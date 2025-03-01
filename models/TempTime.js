@@ -6,7 +6,10 @@ const TempTimeSchema = new mongoose.Schema({
     elapsedTime: { type: Number, default: 0 },
     breakTime: { type: Number, default: 0 },
     date : {type: String, default: new Date().toLocaleDateString()},
-    started : {type: Boolean, default: false}
+    started : {type: Boolean, default: false},
+    paused : {type: Boolean, default: false},
+    pausedAt: { type: Number, default: 0 },
+    
 });
 
 const TempTimeModel = mongoose.model("TempTime", TempTimeSchema);
