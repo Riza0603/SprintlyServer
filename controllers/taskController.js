@@ -1,7 +1,6 @@
 import mongoose, { trusted } from "mongoose";
 import TaskModel from "../models/Tasks.js";
 import axios from 'axios';
-import UserModel from "../models/User.js";
 
 // Add Task API
 export const addTask = async (req, res) => {
@@ -85,11 +84,11 @@ export const addComment = async (req, res) => {
     // task.comments.push(newComment);
     // await task.save();
 
-    await TaskModel.updateOne(
+   const a= await TaskModel.updateOne(
       { _id:taskId },
       { $push: { comments: newComment } }
     );
-
+    console.log("a: is the commnets:",a);
 
     res.status(201).json({ message: "Comment added successfully" });
 

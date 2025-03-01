@@ -287,17 +287,17 @@ export const getAllUsers = async (req, res) => {
 //update the user details
 export const updateUser = async (req, res) => {
   try{
-
+    console.log("req: ", req.body);
     
-    const userId = req.user.id; // Get user ID from the authenticated session
-    const updatedUserData = req.body;
-    console.log("userId", userId);
-    console.log("profile data ", updatedUserData);
+    // const userId = req.body.user.id; // Get user ID from the authenticated session
+    // const updatedUserData = req.body;
+    // console.log("userId", userId);
+    // console.log("profile data ", updatedUserData);
 
-    const { id,email, name, experience, role, reportTo, profilePicUrl} = req.body;
+    const { _id,email, name, experience, role, reportTo, profilePicUrl} = req.body;
     
-    const user = await User.findOneAndUpdate({ _id:id }, { name, email,experience, role, reportTo, profilePicUrl }, { new: true });
-
+    const user = await User.findOneAndUpdate({ _id:_id }, { name, email,experience, role, reportTo, profilePicUrl }, { new: true });
+console.log("updated user", user);
     const updatedUser = await User.findByIdAndUpdate(userId, updatedUserData, { new: true });
 
 

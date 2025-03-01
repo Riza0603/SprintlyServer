@@ -98,6 +98,7 @@ export const getProjectFiles = async (req, res) => {
 export const fetchProjectData = async (req, res) => {
   try {
     const { projectId } = req.params;
+    console.log(projectId);
 
     // Find the project by ID
     const project = await ProjectModel.findById(projectId);
