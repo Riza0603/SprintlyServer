@@ -1,40 +1,49 @@
 import mongoose, { trusted } from "mongoose";
 import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
+import ProjectModel from "../models/Projects.js";
+import { sendTaskAssignmentEmail, sendTaskUpdateEmail } from "../services/emailService.js";
 
 // Add Task API
 export const addTask = async (req, res) => {
-  
   try {
-    const { title, description, projectName, assignee, assigneeId, status, priority, createdBy, startDate, endDate, completedOn, comments } = req.body;
+    const { title, description, projectName, assignee, assigneeId, status, priority, createdBy, createdById, startDate, endDate, completedOn, comments, visibility } = req.body;
 
     const taskData = {
-      title: req.body.title,
-      description: req.body.description,
-      projectName: req.body.projectName || "None",
-      assignee: req.body.assignee || "Unassigned",
-      assigneeId: req.body.assigneeId,
-      status: req.body.status || "No Progress",
-      priority: req.body.priority || "Low",
-      createdBy:req.body.createdBy,
-      createdById:req.body.createdById,
-      startDate: req.body.startDate || null,
-      endDate: req.body.endDate || null,
-      visibility: req.body.visibility || "public",
-      completedOn:req.body.CompletedOn||null,
-      comments: req.body.comments || [],
+      title,
+      description,
+      projectName: projectName || "None",
+      assignee: assignee || "Unassigned",
+      assigneeId,
+      status: status || "No Progress",
+      priority: priority || "Low",
+      createdBy,
+      createdById,
+      startDate: startDate || null,
+      endDate: endDate || null,
+      visibility: visibility || "public",
+      completedOn: completedOn || null,
+      comments: comments || [],
     };
-    
-    // Save Task
+
     const task = new TaskModel(taskData);
     await task.save();
 
-    res.status(201).json(task); // Return the saved task
+    const project = await ProjectModel.findOne({pname: projectName});
+    if (project && project.members.has(assigneeId) && project.members.get(assigneeId).notifyinEmail)     {
+      const user = await UserModel.findById(assigneeId);
+      if (user) {
+        await sendTaskAssignmentEmail(user, project, title, description, startDate, endDate, priority, createdBy);
+      }
+    }
+
+    res.status(201).json({ message: "Task created successfully and email sent", task });
   } catch (err) {
     console.error("Error in addTask:", err.message);
     res.status(400).json({ message: err.message });
   }
 };
+
 
 // Fetch Tasks API
 export const getTasks = async (req, res) => {
@@ -114,7 +123,7 @@ export const updateStatus=async(req,res)=>{
   }
 }
 
-
+//delete comment
 export const deleteComment = async (req, res) => {
   const { taskId, commentId } = req.params; 
   try {
@@ -136,7 +145,7 @@ export const deleteComment = async (req, res) => {
 
 
 
-
+//add subtask
 export const addsubTask = async (req, res) => {
   try {
     const { taskId } = req.params;
@@ -219,22 +228,65 @@ export const updateSubTask= async (req,res)=>{
   }
 }
 
-export const updateTask=async(req,res)=>{
-  try{
-    const {taskId}=req.params;
-    const {title,description,assignee,assigneeId,status,priority,startDate,endDate,visibility}=req.body;
-    const updatedTask=await TaskModel.findByIdAndUpdate(taskId,{title,description,assignee,assigneeId,status,priority,startDate,visibility,endDate},
-      {new:true}
-    )
-    if(!updatedTask){
-      return res.status(404).json({message:"Task not found"})
-    }
-    res.status(200).json(updatedTask)
+export const updateTask = async (req, res) => {
+  try {
+    const { taskId } = req.params;
+    const { title, description, assignee, assigneeId, status, priority, startDate, endDate, visibility } = req.body;
 
-  }catch(error){
-    res.status(500).json({message:"Server error in updateTask()",error:error.message})
+    const existingTask = await TaskModel.findById(taskId);
+    if (!existingTask) {
+      return res.status(404).json({ message: "Task not found" });
+    }
+
+    const changes = {};
+    for (const key of ["title", "description", "assignee", "priority", "startDate", "endDate"]) {
+      const normalizeDate = (date) => (date ? new Date(date).toISOString().split("T")[0] : null);
+
+    let oldValue = existingTask[key];
+    let newValue = req.body[key];
+
+    if (key === "startDate" || key === "endDate") {
+      oldValue = normalizeDate(oldValue);
+      newValue = normalizeDate(newValue);
+    }
+
+    if (newValue !== undefined && String(newValue) !== String(oldValue)) {
+      changes[key] = { old: oldValue || "N/A", new: newValue || "N/A" };
+    }
+    }
+
+    if (Object.keys(changes).length === 0) {
+      return res.status(200).json({ message: "No changes detected" });
+    }
+
+    const updatedTask = await TaskModel.findByIdAndUpdate(
+      taskId,
+      { title, description, assignee, assigneeId, status, priority, startDate, endDate, visibility },
+      { new: true }
+    );
+
+    if (!updatedTask) {
+      return res.status(404).json({ message: "Task update failed" });
+    }
+
+    const project = await ProjectModel.findOne({ pname: updatedTask.projectName });
+    if (project && project.members.has(assigneeId) && project.members.get(assigneeId).notifyinEmail) {
+      const user = await UserModel.findById(assigneeId);
+      if (user) {
+        let changesList = Object.entries(changes)
+          .map(([key, value]) => `<p><strong>${key.replace(/([A-Z])/g, " $1")}:</strong> <br> Old: ${value.old || "N/A"} <br> New: ${value.new || "N/A"}</p>`)
+          .join("");
+          await sendTaskUpdateEmail(user, project, title, changesList);
+      }
+    }
+
+    res.status(200).json(updatedTask);
+  } catch (error) {
+    res.status(500).json({ message: "Server error in updateTask()", error: error.message });
   }
-}
+};
+
+
 
 //update subtask status
 export const updateSubTaskStatus=async(req,res)=>{

@@ -1,15 +1,18 @@
 import ProjectModel from "../models/Projects.js";
 import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
+import mongoose from "mongoose";
+import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/emailService.js";;
 
+//create a new project
 export const createProject = async (req, res) => {
-  const { pname, pdescription,projectCreatedBy, pstart, pend,members } = req.body;
+  const { pname, pdescription, projectCreatedBy, pstart, pend, members } = req.body;
 
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
   }
+
   try {
-    // Check if a project with the same name already exists 
     const existingProject = await ProjectModel.findOne({ pname });
     if (existingProject) {
       return res.status(400).json({
@@ -17,32 +20,36 @@ export const createProject = async (req, res) => {
       });
     }
 
-   // Convert array of memberIds into a Map object
-   const membersMap = {};
-   members.forEach(memberId => {
-     membersMap[memberId] = {
-       notifyinApp: true,
-       notifyinEmail: true,
-       position: memberId === projectCreatedBy?"Project Manager":"Employee",
-     };
-   });
+    const membersMap = {};
+    members.forEach(memberId => {
+      membersMap[memberId] = {
+        notifyinApp: true,
+        notifyinEmail: true,
+        position: memberId === projectCreatedBy ? "Project Manager" : "Employee",
+      };
+    });
 
-   
-    const project = await ProjectModel.create({ pname, pdescription,projectCreatedBy, pstart, pend , members:membersMap });
+    const project = await ProjectModel.create({ pname, pdescription, projectCreatedBy, pstart, pend, members: membersMap });
 
-    //add project to user table
-    await Promise.all(
+    const users = await Promise.all(
       members.map(async (memberId) => {
-        await UserModel.findByIdAndUpdate(
+        const user = await UserModel.findByIdAndUpdate(
           memberId,
-          { $addToSet: { projects: pname } }, 
+          { $addToSet: { projects: pname } },
           { new: true }
         );
+        return user ? user.email : null; // Collect email addresses
       })
     );
 
+    const emails = users.filter(email => email);
+
+    if (emails.length > 0) {
+      await sendProjectAdditionEmail(emails, pname, pdescription, pstart, pend);
+    }
+
     return res.status(201).json({
-      message: "Project created successfully",
+      message: "Project created successfully and emails sent",
       project,
     });
   } catch (error) {
@@ -53,6 +60,8 @@ export const createProject = async (req, res) => {
     });
   }
 };
+
+
 
 //fetches projects by
 export const fetchProjects = async (req, res) => {
@@ -145,46 +154,73 @@ export const updateProjectSettings = async (req, res) => {
 };
 
 
-//get members
-export const getMembers=async(req,res)=>{
-  try{
-    const projName=req.params.projectName;
-    const members=await UserModel.find({projects:projName})
-    
-    res.status(200).json(members)
-  }catch(error){
-    console.log("error in getMembers",error.message)
+//get position details from project and name from register
+export const getMembers = async (req, res) => {
+  try {
+    const projName = req.params.projectName;
+    const project = await ProjectModel.findOne({ pname: projName });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Convert Mongoose Map to JavaScript Map
+    const membersMap = new Map(project.members);
+    const memberIds = Array.from(membersMap.keys()); // Get keys correctly
+
+    if (memberIds.length === 0) {
+      return res.status(400).json({ message: "No members found in the project" });
+    }
+
+    const membersData = await UserModel.find({ _id: { $in: memberIds.map(id => new mongoose.Types.ObjectId(id)) } }, "name");
+
+    const members = membersData.map((member) => ({
+      _id: member._id,
+      name: member.name,
+      role: membersMap.get(member._id.toString()).position,
+    }));
+
+    res.status(200).json(members);
+  } catch (error) {
+    console.error("Error in getMembers", error.message);
     res.status(500).json({ message: error.message });
   }
-}
+};
+
 
 //delete member from specific project
-export const deleteMember= async (req,res)=>{
-  try{
-    const memberId=req.params.memberId;
+export const deleteMember = async (req, res) => {
+  try {
+    const memberId = req.params.memberId;
     const { projectName } = req.body;
-    
+
     const updateProject = await ProjectModel.findOneAndUpdate(
       { pname: projectName },
-      { $unset: { [`members.${memberId}`]: "" } }, 
+      { $unset: { [`members.${memberId}`]: "" } },
       { new: true }
     );
 
     if (!updateProject) {
       return res.status(404).json({ message: "Project not found" });
     }
-    
-    const updateMember= await UserModel.findOneAndUpdate({"_id":memberId},
-      { $pull: { projects: projectName } }, 
+
+    const user = await UserModel.findByIdAndUpdate(
+      memberId,
+      { $pull: { projects: projectName } },
+      { new: true }
     );
-    if(!updateMember){
+
+    if (!user) {
       return res.status(404).json({ message: "Member not found in project" });
     }
-    res.status(200).json({ message: "Member deleted successfully" });
-  }catch(err){
-    res.status(500).json({ message: "Error deleting member", err });
+    await sendProjectRemovalEmail(user,projectName);
+    res.status(200).json({ message: "Member deleted successfully and email sent" });
+  } catch (err) {
+    console.error("Error deleting member:", err);
+    res.status(500).json({ message: "Error deleting member", error: err.message });
   }
-}
+};
+
 
 //add members to project
 export const addMember = async (req, res) => {
@@ -209,6 +245,8 @@ export const addMember = async (req, res) => {
       },
       { new: true }
     );
+
+    await sendProjectAdditionEmail([member.email], projectName, project.pdescription, project.pstart, project.pend);
 
     res.status(200).json(member);
   } catch (err) {

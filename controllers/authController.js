@@ -175,7 +175,7 @@ export const forgotPassword = async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user) {
-    const token = jwt.sign({ id: user._id }, "jwt_secret_key", { expiresIn: "8h" });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "8h" });
 
     const mailOptions = {
       from: "Sprintly",
@@ -221,7 +221,7 @@ export const resetPassword = async (req, res) => {
   const { password } = req.body;
 
   try {
-    const decoded = jwt.verify(token, "jwt_secret_key");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     if (!decoded || decoded.id !== id) {
       return res.status(400).json({ success: false, message: "Invalid or expired reset token." });
