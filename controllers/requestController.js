@@ -1,4 +1,5 @@
 import RequestModel  from "../models/Requests.js";
+import UserModel from "../models/User.js";
 
 // Fetching all the requests
 
@@ -21,6 +22,13 @@ export const createAdminAccessRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: "User ID is required" });
         }
 
+         // Checking if userID is a registered user
+         const userExists = await UserModel.findById(userID);
+         if (!userExists) {
+             return res.status(404).json({ success: false, message: "User not found" });
+         }
+ 
+        // Creating a new Request
         const newRequest = new RequestModel({ userID, reqType: "ADMIN_ACCESS" });
 
         await newRequest.save();
@@ -36,6 +44,7 @@ export const createAdminAccessRequest = async (req, res) => {
 };
 
 // creating a user addition request
+
 export const createUserAdditionRequest = async (req, res) => {
     try {
         const { userID } = req.body; 
@@ -43,6 +52,12 @@ export const createUserAdditionRequest = async (req, res) => {
         if (!userID) {
             return res.status(400).json({ success: false, message: "User ID is required" });
         }
+
+         // Validate if userID is a registered user
+         const userExists = await UserModel.findById(userID);
+         if (!userExists) {
+             return res.status(404).json({ success: false, message: "User not found" });
+         } 
 
         const newRequest = new RequestModel({ userID, reqType: "USER_ADDITION" });
 
@@ -59,6 +74,7 @@ export const createUserAdditionRequest = async (req, res) => {
 };
 
 //creating a project deletion request
+
 export const createProjectDeletionRequest = async (req, res) => {
     try {
         const { userID } = req.body; 
@@ -66,6 +82,12 @@ export const createProjectDeletionRequest = async (req, res) => {
         if (!userID) {
             return res.status(400).json({ success: false, message: "User ID is required" });
         }
+
+         // Validate if userID is a registered user
+         const userExists = await UserModel.findById(userID);
+         if (!userExists) {
+             return res.status(404).json({ success: false, message: "User not found" });
+         } 
 
         const newRequest = new RequestModel({ userID, reqType: "PROJECT_DELETION" });
 
