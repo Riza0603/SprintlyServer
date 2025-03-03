@@ -25,18 +25,49 @@ export const startTimer = async (req, res) => {
     }
     };
 
-export const getTime = async (req, res) => {
-    try {
-        const tempTime = await TempTimeModel.findOne
-        ({ userId: req.body.userId, date:req.body.date});
-        const time = Date.now()-tempTime.startTime-tempTime.breakTime;
-        
-        res.status(200).json({time,started:tempTime.started}); // Return the saved tempTime
-    }
-    catch (err) {
-        res.status(400).json({ message: err.message });
-    }
-    };
+    export const getTime = async (req, res) => {
+        try {
+            const tempTime = await TempTimeModel.findOne
+            ({ userId: req.body.userId, date:req.body.date});
+            if(tempTime.paused===true){
+                const time = tempTime.pausedAt-tempTime.startTime-tempTime.breakTime;
+                // console.log("Time fetched ",time,tempTime.started);
+                res.status(200).json({time,started:tempTime.started,paused:tempTime.paused});
+            }else{
+                const time = Date.now()-tempTime.startTime-tempTime.breakTime;
+                // console.log("Time fetched ",time,tempTime.started);
+                res.status(200).json({time,started:tempTime.started,paused:tempTime.paused}); // Return the saved tempTime
+            }
+        }
+        catch (err) {
+            console.error("Error in getTime:", err.message);
+            res.status(400).json({ message: err.message });
+        }
+        };
+
+
+        export const pauseResumeTimer = async (req, res) => {
+            try {
+                
+                if(req.body.paused===true){
+                    const tempTime = await TempTimeModel.findOneAndUpdate
+                    ({ userId: req.body.userId, date:req.body.date},{paused:req.body.paused,pausedAt:req.body.pausedAt},{new:true});            
+                    res.status(200).json(tempTime);
+                }else{
+                    const tempTime = await TempTimeModel.findOneAndUpdate
+                    ({ userId: req.body.userId, date:req.body.date},{paused:req.body.paused},{new:true});
+                    tempTime.breakTime = tempTime.breakTime + Date.now()-tempTime.pausedAt;
+                    await tempTime.save();
+                    res.status(200).json(tempTime);
+                }
+            }
+            catch (err) {
+                console.error("Error in getTime:", err.message);
+                res.status(400).json({ message: err.message });
+            }
+            };
+
+            
 export const stopTimer = async (req, res) => {
     try {
         const tempTime = await TempTimeModel.findOneAndUpdate({userId:req.body.userId,date:req.body.date},{elapsedTime:req.body.elapsedTime,started:false},{new:true});
@@ -100,6 +131,8 @@ export const fetchTimeEntries = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+
 
   
   
