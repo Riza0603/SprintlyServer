@@ -14,6 +14,7 @@ export const startTimer = async (req, res) => {
         elapsedTime: req.body.elapsedTime,
         breakTime: req.body.breakTime,
         date: req.body.date,
+        projectName:req.body.projectName,
         started : req.body.started
         };
         
@@ -36,11 +37,11 @@ export const startTimer = async (req, res) => {
             if(tempTime.paused===true){
                 const time = tempTime.pausedAt-tempTime.startTime-tempTime.breakTime;
                 // console.log("Time fetched ",time,tempTime.started);
-                res.status(200).json({time,started:tempTime.started,paused:tempTime.paused});
+                res.status(200).json({time,started:tempTime.started,paused:tempTime.paused,project:tempTime.projectName}); // Return the saved tempTime
             }else{
                 const time = Date.now()-tempTime.startTime-tempTime.breakTime;
                 // console.log("Time fetched ",time,tempTime.started);
-                res.status(200).json({time,started:tempTime.started,paused:tempTime.paused}); // Return the saved tempTime
+                res.status(200).json({time,started:tempTime.started,paused:tempTime.paused,project:tempTime.projectName}); // Return the saved tempTime
             }
         }
         catch (err) {
@@ -94,26 +95,59 @@ export const stopTimer = async (req, res) => {
             // If no record exists, create a new one
             timeSheet = new TimeSheetModel({
                 userId: req.body.userId,
-                timeSheet: [{ date: req.body.date, time: req.body.elapsedTime }]
+                timeSheet: [{ date: req.body.date, 
+                    // time: req.body.elapsedTime,
+                    projectsHours: [{
+                        projectName: tempTime.projectName, 
+                        time: req.body.elapsedTime
+                    }]
+                 }]
             });
         }else {
-            let found = false; // Flag to track if the date already exists
-
-            // Use .map() to update existing entry if date matches
+            let dateFound = false; // Flag to track if the date already exists
+        
+            // Use .map() to update existing entry if the date matches
             timeSheet.timeSheet = timeSheet.timeSheet.map(entry => {
                 if (entry.date === req.body.date) {
-                    found = true;
-                    return { ...entry, time: entry.time + req.body.elapsedTime }; // Update time
+                    dateFound = true;
+        
+                    // Check if the project exists in the projectsHours array
+                    let projectFound = false;
+        
+                    // Update project time if project exists
+                    const updatedProjectsHours = entry.projectsHours.map(project => {
+                        if (project.projectName === tempTime.projectName) {
+                            projectFound = true;
+                            return { ...project, time: project.time + req.body.elapsedTime };
+                        }
+                        return project;
+                    });
+                    // If project does not exist, add a new project entry
+                    if (!projectFound) {
+                        updatedProjectsHours.push({
+                            projectName: tempTime.projectName,
+                            time: req.body.elapsedTime
+                        });
+                    }
+        
+                    return { ...entry,  projectsHours: updatedProjectsHours };
                 }
                 return entry;
             });
-
-            // If date was not found, append a new entry
-            if (!found) {
-                timeSheet.timeSheet.push({ date: req.body.date, time: req.body.elapsedTime });
+        
+            // If date was not found, append a new entry with the project
+            if (!dateFound) {
+                timeSheet.timeSheet.push({
+                    date: req.body.date,
+                    // time: req.body.elapsedTime,
+                    projectsHours: [{
+                        projectName: tempTime.projectName,
+                        time: req.body.elapsedTime
+                    }]
+                });
             }
         }
-
+        
         await timeSheet.save();
         await TempTimeModel.findOneAndDelete({userId:req.body.userId,date:req.body.date});
 
