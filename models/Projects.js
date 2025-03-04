@@ -6,12 +6,12 @@ import { v4 as uuidv4 } from "uuid";
 // }, { _id: true }); // Enable automatic _id generation
  
 
-const MemberSchema = new mongoose.Schema({
-  _id: { type: mongoose.Schema.Types.ObjectId, required: true }, // Store member ID
-  name: { type: String, required: true },
-  email:{type:String,required:true},
-  position: { type: String, default: "Employee" },
-});
+// const MemberSchema = new mongoose.Schema({
+//   _id: { type: mongoose.Schema.Types.ObjectId, required: true }, // Store member ID
+//   name: { type: String, required: true },
+//   email:{type:String,required:true},
+//   position: { type: String, default: "Employee" },
+// });
 
 
 const ProjectSchema = new mongoose.Schema({
@@ -19,10 +19,16 @@ const ProjectSchema = new mongoose.Schema({
   pdescription: String,
   pstart: Date,
   pend: Date,
-  members: { type: [MemberSchema], default: [] },
+  projectCreatedBy:{type:mongoose.Schema.Types.ObjectId},
+  members: {
+    type: Map, // Use a Map to store objectId as key and notify details as value
+    of: new mongoose.Schema({
+      notifyinApp: { type: Boolean, default: true },
+      notifyinEmail: { type: Boolean, default: true },
+      position : { type: String, default: "Employee" },
+    }, { _id: false }) 
+  },
   pstatus: { type: String, default: "In-Progress" },
-  notifyinApp: { type: Boolean, default: true },
-  notifyemail: { type: Boolean, default: true },
 });
 
 const ProjectModel = mongoose.model("Projects", ProjectSchema);

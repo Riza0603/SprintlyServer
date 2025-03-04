@@ -1,10 +1,12 @@
-import express from "express";
-import cors from "cors";
-import connectDB from "./config/db.js";
 import bodyParser from "body-parser";
-import authRoutes from "./routes/authRoutes.js";  
+import cors from "cors";
+import express from "express";
+import connectDB from "./config/db.js";
+import authRoutes from "./routes/authRoutes.js";
 import projectRoute from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
+import tempTimeRoutes from "./routes/tempTimeRoutes.js";
+
 import adminRoutes from "./routes/adminRoutes.js"
 import requestRoutes from "./routes/requestRoutes.js"; 
 
@@ -19,7 +21,8 @@ connectDB();
 app.use("/auth", authRoutes);
 app.use("/api", projectRoute);
 app.use("/api", taskRoutes);
-app.use("/api",authRoutes)
+app.use("/api",authRoutes);
+app.use("/api",tempTimeRoutes)
 app.use("/admin",adminRoutes);
 app.use("/request",requestRoutes);
 
