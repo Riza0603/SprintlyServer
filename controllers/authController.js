@@ -22,39 +22,152 @@ const handleErrors = (err, res) => {
 export const login = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
-    if (user) {
-      const isValidPassword = await argon2.verify(user.password, req.body.password);
-      console.log("Is valid password: ", isValidPassword); // Debugging log for password verification
 
-      if (isValidPassword) {
-        // Generate JWT Token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h"});
-
-        res.json({
-          success: true,
-          message: "Login Successful!",
-          user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            experience: user.experience,
-            reportTo: user.reportTo
-          },
-          token
-        });
-      } else {
-        res.json({ success: false, message: "Invalid Password" });
-      }
-    } else {
-      res.json({ success: false, message: "No such user! Please Sign up." });
+    if (!user) {
+      return res.json({ success: false, message: "No such user! Please Sign up." });
     }
+
+    if (!user.isVerified) {
+      return res.json({ success: false, message: "Your account is not verified. Please verify your email before logging in." });
+    }
+
+    const isValidPassword = await argon2.verify(user.password, req.body.password);
+    console.log("Is valid password: ", isValidPassword); 
+
+    if (!isValidPassword) {
+      return res.json({ success: false, message: "Invalid Password" });
+    }
+
+    // Generate JWT Token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+    res.json({
+      success: true,
+      message: "Login Successful!",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        experience: user.experience,
+        reportTo: user.reportTo,
+      },
+      token,
+    });
+
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
+// Registration (Store dateOfJoining in OTP table)
+export const signup = async (req, res) => {
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const { name, email, password, phone, dateOfJoining } = req.body; // Receive dateOfJoining
+
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) return res.status(400).json({ success: false, message: "Email already exists." });
+
+    const hashedPassword = await argon2.hash(password); // Hash password
+    const hashedOTP = await bcrypt.hash(verificationCode, 10); // Hash OTP
+
+    // Store OTP and user details temporarily, including dateOfJoining
+    await new UserOtpVerification({
+      email,
+      name,
+      phone,
+      password: hashedPassword, 
+      otp: hashedOTP,
+      dateOfJoining, // Store Date of Joining temporarily
+      expiresAt: Date.now() + 240000, 
+    }).save();
+
+    const mailOptions = {
+      from: "Sprintly",
+      to: email,
+      subject: "Verify Your Email - Sprintly",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
+          <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+            <h2 style="color: #333;">Welcome to <span style="color: #2563eb;">Sprintly</span>!</h2>
+            <p style="color: #555; font-size: 16px;">
+              Thank you for signing up! Use the OTP below to verify your email:
+            </p>
+            <div style="display: inline-block; padding: 15px 25px; font-size: 24px; font-weight: bold; color: #fff; background: #2563eb; border-radius: 8px; margin: 20px 0;">
+              ${verificationCode}
+            </div>
+            <p style="color: #555; font-size: 14px;">
+              This OTP is valid for a limited time. If you did not request this, please ignore this email.
+            </p>
+            <a href="mailto:sprintlyganglia@gmail.com" style="display: inline-block; margin-top: 15px; color: #2563eb; font-size: 14px; text-decoration: none;">
+              Need help? Contact Support
+            </a>
+            <footer style="margin-top: 20px; font-size: 12px; color: #888;">
+              <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+            </footer>
+          </div>
+        </div>
+      `,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) return res.status(500).json({ success: false, message: "Error sending OTP email." });
+      res.json({ success: true, message: "OTP sent. Please verify your email." });
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error during signup." });
+  }
+};
+
+// Verify OTP (Retrieve dateOfJoining, calculate experience, and store in User table)
+export const verifyOTP = async (req, res) => {
+  const { email, otp } = req.body; // dateOfJoining is stored in OTP table, so not needed in request
+
+  try {
+    const otpRecord = await UserOtpVerification.findOne({ email });
+
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: "No pending verification found." });
+    }
+
+    // Check if OTP is expired
+    if (otpRecord.expiresAt < Date.now()) {
+      await UserOtpVerification.deleteMany({ email });
+      return res.status(400).json({ success: false, message: "OTP expired. Request a new one." });
+    }
+
+    // Compare entered OTP with hashed OTP
+    const validOtp = await bcrypt.compare(otp, otpRecord.otp);
+    if (!validOtp) {
+      return res.status(400).json({ success: false, message: "Invalid OTP. Try again." });
+    }
+
+    // Retrieve dateOfJoining from OTP record and calculate experience
+    const joiningDate = new Date(otpRecord.dateOfJoining);
+    const currentDate = new Date();
+    const experience = Math.floor((currentDate - joiningDate) / (1000 * 60 * 60 * 24 * 365));
+
+    // Store user in the database
+    const newUser = await User.create({
+      name: otpRecord.name,
+      email: otpRecord.email,
+      phone: otpRecord.phone,
+      password: otpRecord.password, 
+      experience, 
+      isVerified: true, 
+    });
+
+    
+    await UserOtpVerification.deleteMany({ email });
+
+    res.json({ success: true, message: "User verified and registered successfully.", user: newUser });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 //forgot password
 export const forgotPassword = async (req, res) => {
@@ -62,7 +175,7 @@ export const forgotPassword = async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user) {
-    const token = jwt.sign({ id: user._id }, "jwt_secret_key", { expiresIn: "1h" });
+    const token = jwt.sign({ id: user._id }, "jwt_secret_key", { expiresIn: "8h" });
 
     const mailOptions = {
       from: "Sprintly",
@@ -76,14 +189,14 @@ export const forgotPassword = async (req, res) => {
               We received a request to reset your password. Click the button below to proceed:
             </p>
             <a href="http://localhost:5173/reset-password/${user._id}/${token}"
-              style="display: inline-block; padding: 15px 25px; font-size: 16px; font-weight: bold; color: #fff; background: #4CAF50; border-radius: 8px; text-decoration: none; margin: 20px 0;">
+              style="display: inline-block; padding: 15px 25px; font-size: 16px; font-weight: bold; color: #fff; background: #2563eb; border-radius: 8px; text-decoration: none; margin: 20px 0;">
               Reset Password
             </a>
             <p style="color: #555; font-size: 14px;">
               If you did not request a password reset, please ignore this email.
             </p>
             <footer style="margin-top: 20px; font-size: 12px; color: #888;">
-              <p>Need help? <a href="mailto:sprintlyganglia@gmail.com" style="color: #4CAF50; text-decoration: none;">Contact Support</a></p>
+              <p>Need help? <a href="mailto:sprintlyganglia@gmail.com" style="color: #2563eb; text-decoration: none;">Contact Support</a></p>
               <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
             </footer>
           </div>
@@ -103,29 +216,24 @@ export const forgotPassword = async (req, res) => {
 
 
 //reset password
-// 
 export const resetPassword = async (req, res) => {
   const { id, token } = req.params;
   const { password } = req.body;
 
   try {
-    console.log("Verifying token...");
     const decoded = jwt.verify(token, "jwt_secret_key");
 
     if (!decoded || decoded.id !== id) {
       return res.status(400).json({ success: false, message: "Invalid or expired reset token." });
     }
 
-    console.log("Token verified. Checking user...");
     const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found." });
     }
 
-    console.log("User found. Hashing new password...");
     const hashedPassword = await argon2.hash(password);
 
-    console.log("Updating user password...");
     await User.findByIdAndUpdate(id, { password: hashedPassword });
 
     res.json({ success: true, message: "Password updated successfully." });
@@ -137,95 +245,9 @@ export const resetPassword = async (req, res) => {
 
 
 
-//regisration
-export const signup = async (req, res) => {
-  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const { name, email, password } = req.body;
-
-  try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ success: false, message: "Email already exists." });
-
-    const hashedOTP = await bcrypt.hash(verificationCode, 10);
-    const newUser = await User.create({ name, email, password });
-
-    await new UserOtpVerification({ userId: newUser._id, email, otp: hashedOTP, expiresAt: Date.now() + 3600000 }).save();
-
-    const mailOptions = {
-      from: "Sprintly",
-      to: email,
-      subject: "Verify Your Email - Sprintly",
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
-          <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
-            <h2 style="color: #333;">Welcome to <span style="color: #4CAF50;">Sprintly</span>!</h2>
-            <p style="color: #555; font-size: 16px;">
-              Thank you for signing up! Use the OTP below to verify your email:
-            </p>
-            <div style="display: inline-block; padding: 15px 25px; font-size: 24px; font-weight: bold; color: #fff; background: #4CAF50; border-radius: 8px; margin: 20px 0;">
-              ${verificationCode}
-            </div>
-            <p style="color: #555; font-size: 14px;">
-              This OTP is valid for a limited time. If you did not request this, please ignore this email.
-            </p>
-            <a href="mailto:sprintlyganglia@gmail.com" style="display: inline-block; margin-top: 15px; color: #4CAF50; font-size: 14px; text-decoration: none;">
-              Need help? Contact Support
-            </a>
-            <footer style="margin-top: 20px; font-size: 12px; color: #888;">
-              <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
-            </footer>
-          </div>
-        </div>
-      `,
-    };
-    
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) return res.status(500).json({ success: false, message: "Error sending OTP email." });
-      res.json({ success: true, message: "User created and email sent." });
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error creating user." });
-  }
-};
-
-export const verifyOTP = async (req, res) => {
-  const { email, otp } = req.body;
-  try {
-    const otpRecord = await UserOtpVerification.findOne({ email });
-
-    if (!otpRecord) {
-      throw new Error("Account record does not exist or is already verified");
-    }
-
-    // Check if the OTP has expired
-    if (otpRecord.expiresAt < Date.now()) {
-      await UserOtpVerification.deleteMany({ email });
-      throw new Error("Code has expired, please request again.");
-    }
-
-    // Compare entered OTP with the hashed OTP stored in the database
-    const validOtp = await bcrypt.compare(otp, otpRecord.otp);  // Use bcrypt to compare the OTP
-    if (!validOtp) {
-      throw new Error("Invalid OTP, check your inbox.");
-    }
-
-    // Mark user as verified and clean up OTP record
-    await User.updateOne({ email }, { isVerified: true });
-    await UserOtpVerification.deleteMany({ email });
-
-    res.json({ success: true, message: "User email verified" });
-  } catch (error) {
-    res.json({ success: false, message: error.message });
-  }
-};
-
 export const getUser = async (req, res) => {
-  console.log("Received request for user:", req.params.email);
-
   const { email } = req.params;
   const token = req.headers.authorization?.split(" ")[1]; // Extract Bearer token
-  console.log("Token:", token);
 
   if (!token) {
     return res.status(401).json({ success: false, message: "Unauthorized: No token provided" });
@@ -233,26 +255,24 @@ export const getUser = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Token verified:", decoded);
   } catch (err) {
-    console.log("Invalid token");
     return res.status(401).json({ success: false, message: "Invalid token" });
   }
 
   try {
-    const user = await User.findOne({ email }).select("name email experience role reportTo"); // Explicitly select fields
+    
+    const user = await User.findOne({ email }).select("name email phone experience role reportTo");
 
     if (!user) {
-      console.log("User not found:", email);
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    
     res.json({ success: true, user });
   } catch (error) {
-    handleErrors(error, res); // Pass error to the error handler
+    handleErrors(error, res);
   }
 };
+
 
 //get the list of all users
 export const getAllUsers = async (req, res) => {
@@ -264,6 +284,7 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
+//update the user details
 export const updateUser = async (req, res) => {
   try{
     const { id,email, name, experience, role, reportTo} = req.body;
@@ -312,24 +333,8 @@ export const verifyToken = async (req, res) => {
 //   }
 // };
 
-//resetToken Generation
-// export const getResetToken = async (req, res) => {
-//   const { id } = req.params;
 
-//   try {
-//     const user = await User.findById(id);
-//     if (!user) {
-//       return res.status(404).json({ success: false, message: "User not found." });
-//     }
 
-//     // Generate token
-//     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "15m" });
-
-//     res.json({ success: true, token });
-//   } catch (error) {
-//     res.status(500).json({ success: false, message: "Internal server error" });
-//   }
-// };
 export const getUsers = async (req, res) => {
   try {
     
@@ -340,3 +345,70 @@ export const getUsers = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+//fetchById
+export const fetchById = async (req, res) => {
+  try {
+    const { memberIds } = req.body;
+    const members = await User.find({ '_id': { $in: memberIds } });
+    res.json(members);
+  } catch (error) {
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
+export const resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: "Email is required." });
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      console.log("User not found for email:", email);
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+    // Generate OTP
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    //console.log("Generated OTP:", newOtp);
+
+    const hashedOtp = await bcrypt.hash(newOtp, 10);
+    try {
+      await UserOtpVerification.deleteMany({ email });
+      //console.log("Old OTP records deleted for:", email);
+    } catch (err) {
+      console.error("Error deleting previous OTPs:", err);
+    }
+
+    // Save new OTP
+    const otpRecord = new UserOtpVerification({
+      userId: user._id,
+      email,
+      otp: hashedOtp,
+      expiresAt: Date.now() + 240000, 
+    });
+
+    await otpRecord.save();
+    
+    // Email options
+    const mailOptions = {
+      from: "Sprintly",
+      to: email,
+      subject: "Resend OTP - Sprintly",
+      html: `<p>Your OTP: <strong>${newOtp}</strong></p>`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Email sending error:", error);
+        return res.status(500).json({ success: false, message: "Error sending OTP email." });
+      }
+      console.log("OTP email sent:", info.response);
+      res.json({ success: true, message: "OTP resent successfully. Check your email." });
+    });
+
+  } catch (error) {
+    console.error("Error resending OTP:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
