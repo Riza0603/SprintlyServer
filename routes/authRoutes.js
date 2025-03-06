@@ -16,6 +16,5 @@ router.get("/getUsers", getUsers);
 router.get("/getAllUsers", getAllUsers);
 router.post("/members", fetchById);
 router.post("/resendOTP",resendOTP);
-//router.get('/verify-token/:id/:token', verifyToken);
-//router.get("/get-reset-token/:id", getResetToken);
+
 export default router;

@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import argon2 from "argon2";
 
 const userSchema = new mongoose.Schema(
   {
@@ -13,11 +12,9 @@ const userSchema = new mongoose.Schema(
     projects: { type: [String], default: [] } ,
     reportTo: { type: String, default: "N/A" },
     isVerified: { type: Boolean, default: false },
+    adminAccess: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
-
-
-
 const UserModel = mongoose.model("register", userSchema);
 export default UserModel; 
