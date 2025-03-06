@@ -31,16 +31,13 @@ export const startTimer = async (req, res) => {
             ({ userId: req.body.userId, date:req.body.date});
             if(tempTime.paused===true){
                 const time = tempTime.pausedAt-tempTime.startTime-tempTime.breakTime;
-                // console.log("Time fetched ",time,tempTime.started);
                 res.status(200).json({time,started:tempTime.started,paused:tempTime.paused});
             }else{
                 const time = Date.now()-tempTime.startTime-tempTime.breakTime;
-                // console.log("Time fetched ",time,tempTime.started);
                 res.status(200).json({time,started:tempTime.started,paused:tempTime.paused}); // Return the saved tempTime
             }
         }
         catch (err) {
-            console.error("Error in getTime:", err.message);
             res.status(400).json({ message: err.message });
         }
         };
@@ -62,7 +59,6 @@ export const startTimer = async (req, res) => {
                 }
             }
             catch (err) {
-                console.error("Error in getTime:", err.message);
                 res.status(400).json({ message: err.message });
             }
             };

@@ -296,7 +296,6 @@ export const updateUser = async (req, res) => {
     const { _id,email, name, experience, role, reportTo, profilePicUrl} = req.body;
     
     const user = await User.findOneAndUpdate({ _id:_id }, { name, email,experience, role, reportTo, profilePicUrl }, { new: true });
-console.log("updated user", user);
     const updatedUser = await User.findByIdAndUpdate(userId, updatedUserData, { new: true });
 
 
@@ -316,15 +315,12 @@ await TaskModel.updateMany({ "comments.userId": id }, { $set: { "comments.$[].us
 
 export const updateUserProfilePic = async (req, res) => {
   const { email, profilePicUrl } = req.body;
-console.log(profilePicUrl);
   try {
     const user = await User.findOneAndUpdate(
       { email: email },
       { profilePicUrl: profilePicUrl }, // Updating the profilePicUrl field
       { new: true }
     );
-    console.log("user data: ", user);
-
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });

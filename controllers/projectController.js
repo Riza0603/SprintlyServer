@@ -104,12 +104,11 @@ export const getProjectFiles = async (req, res) => {
   }
 }
 
-
+//fetches project data by id
 export const fetchProjectData = async (req, res) => {
   try {
     const { projectId } = req.params;
 
-    // Find the project by ID
     const project = await ProjectModel.findById(projectId);
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
