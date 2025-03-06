@@ -20,9 +20,9 @@
 # }
 
 //timesheet fetching by project name
-POST http://localhost:5000/api/get_timesheet_by_project
+PUT   http://localhost:5000/api/update-project
 Content-Type: application/json
 
 {
-    "projectName": "Patent Exchange"
+     "projectId": "67b2e4dc28d7cc5f1379ab4b"
 }
