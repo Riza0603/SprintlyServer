@@ -312,6 +312,19 @@ export const verifyToken = async (req, res) => {
   }
 };
 
+// export const getUsers = async (req, res) => {
+//   try {
+//     console.log("Fetching all users...");  // Debugging
+//     const users = await User.find({}, "-password");  // Exclude passwords for security
+//     res.status(200).json(users);
+//   } catch (err) {
+//     console.error("Error in getUsers:", err.message);
+//     res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
+
+
+
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find({}, "-password");

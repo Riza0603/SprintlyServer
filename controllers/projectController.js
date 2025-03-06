@@ -3,7 +3,7 @@ import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
 import NotificationModel from "../models/Notification.js";
 import { createNotification } from "./notificationController.js";
-//project creationimport mongoose from "mongoose";
+import mongoose from "mongoose";
 import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/emailService.js";;
 
 //create a new project
@@ -499,4 +499,21 @@ export const fetchDetails = async (req, res) => {
     console.error("Error:", err);
     res.status(500).json({ error: err.message });
   }
+};
+
+//get projrct name by creator id
+export const getProjectByManager=async(req,res)=>{
+  try{
+    const {projectCreatedById}=req.params;
+    const project=await ProjectModel.find({projectCreatedBy:projectCreatedById},"pname");
+   
+    if(!project){
+      return res.status(404).json({message:"No project found"})
+    }
+    res.status(200).json(project);  
+}
+catch (err) {
+  console.error("Error:", err);
+  res.status(500).json({ error: err.message });
+}
 };
