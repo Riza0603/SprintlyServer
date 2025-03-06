@@ -304,11 +304,12 @@ export const getMembers = async (req, res) => {
       return res.status(400).json({ message: "No members found in the project" });
     }
 
-    const membersData = await UserModel.find({ _id: { $in: memberIds.map(id => new mongoose.Types.ObjectId(id)) } }, "name");
+    const membersData = await UserModel.find({ _id: { $in: memberIds.map(id => new mongoose.Types.ObjectId(id)) } }, "name email");
 
     const members = membersData.map((member) => ({
       _id: member._id,
       name: member.name,
+      email: member.email,
       role: membersMap.get(member._id.toString()).position,
     }));
 
@@ -318,19 +319,6 @@ export const getMembers = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
-//get members
-export const getMember=async(req,res)=>{
-  try{
-    const projName=req.params.projectName;
-    const members=await UserModel.find({projects:projName})
-    
-    res.status(200).json(members)
-  }catch(error){
-    console.log("error in getMembers",error.message)
-    res.status(500).json({ message: error.message });
-  }
-}
 
 
 //remove member from project
