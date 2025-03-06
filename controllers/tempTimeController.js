@@ -29,7 +29,6 @@ export const startTimer = async (req, res) => {
 
    
     export const getTime = async (req, res) => {
-        console.log("req recieved ",req.body.date);
         try {
             const tempTime = await TempTimeModel.findOne
             ({ userId: req.body.userId, date:req.body.date});
@@ -48,33 +47,27 @@ export const startTimer = async (req, res) => {
         }
         }
         catch (err) {
-            console.error("Error in getTime:", err.message);
             res.status(400).json({ message: err.message });
         }
         };
 
 
         export const pauseResumeTimer = async (req, res) => {
-            // console.log("pause / resume request recieved ",req.body);
             try {
                 
                 if(req.body.paused===true){
                     const tempTime = await TempTimeModel.findOneAndUpdate
                     ({ userId: req.body.userId, date:req.body.date},{paused:req.body.paused,pausedAt:req.body.pausedAt},{new:true});            
-                    // console.log("timer Paused", tempTime);
                     res.status(200).json(tempTime);
                 }else{
                     const tempTime = await TempTimeModel.findOneAndUpdate
                     ({ userId: req.body.userId, date:req.body.date},{paused:req.body.paused},{new:true});
                     tempTime.breakTime = tempTime.breakTime + Date.now()-tempTime.pausedAt;
                     await tempTime.save();
-                    // console.log("timer Resume", tempTime);
                     res.status(200).json(tempTime);
                 }
-                 // Return the saved tempTime
             }
             catch (err) {
-                console.error("Error in getTime:", err.message);
                 res.status(400).json({ message: err.message });
             }
             };
