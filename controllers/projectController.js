@@ -325,7 +325,7 @@ export const getProjectByManager=async(req,res)=>{
   try{
     const {projectCreatedById}=req.params;
     const project=await ProjectModel.find({projectCreatedBy:projectCreatedById},"pname");
-    console.log("sf",project)
+   
     if(!project){
       return res.status(404).json({message:"No project found"})
     }
