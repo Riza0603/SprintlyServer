@@ -12,7 +12,6 @@ router.post("/addMember",addMember);
 router.post("/updateProject/:projectId",updateProject);
 router.post("/updateProjectDeletedFile/:projectId", updateProjectDeletedFile);
 router.get("/fetchProjectData/:projectId", fetchProjectData);
-
 router.delete("/deleteMember/:memberId",deleteMember);
 router.delete("/deleteUser/:memberId",deleteUser);
 router.post("/updateGlobalSettings", updateGlobalSettings);

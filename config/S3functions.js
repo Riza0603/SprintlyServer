@@ -43,7 +43,9 @@ export const uploadFileToS3 = async (file) => {
 
 
 export const deleteFilesFromS3 = async (fileUrls) => {
+    console.log("deel", fileUrls);
     if (!fileUrls || fileUrls.length === 0) return;
+    console.log("deel", fileUrls);
 
     const deleteParams = {
         Bucket: bName,
@@ -52,7 +54,9 @@ export const deleteFilesFromS3 = async (fileUrls) => {
         },
     };
 
-    await s3.send(new DeleteObjectsCommand(deleteParams));
+   const ankit = await s3.send(new DeleteObjectsCommand(deleteParams));
+   console.log(ankit) 
+   return {"deletedFiles":fileUrls};
 };
 
 export const getPresignedUrl = async (fileName) => {

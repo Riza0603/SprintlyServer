@@ -79,9 +79,7 @@ export const getTasks = async (req, res) => {
 export const addComment = async (req, res) => {
   try {
     const { taskId } = req.params;
-
-    const { userId, username, text, attachments } = req.body;
-
+    const { username, text, userId } = req.body;
 
     if (!username || !text) {
       return res.status(400).json({ message: "Username and text are required." });
@@ -95,10 +93,9 @@ export const addComment = async (req, res) => {
 
     const newComment = {
       _id: new mongoose.Types.ObjectId(),
-      userId: userId,
+      userId: new mongoose.Types.ObjectId(userId),
       username: username,
       text,
-      attachments: attachments || [],
     };
 
     // Update task with new comment
@@ -187,45 +184,32 @@ export const updateStatus = async (req, res) => {
 
 //delete comment
 export const deleteComment = async (req, res) => {
-  const { taskId, commentId } = req.params; // Expect taskId to find the task
+  const { taskId, commentId } = req.params;
 
-  
+  try {
+    // Find the task to get the comment's details before deleting
     const task = await TaskModel.findById(taskId);
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
     }
-    const comment = task.comments.find((comment) => comment._id.toString() === commentId);
-    
+
+    // Find the comment in the task
+    const comment = task.comments.find((c) => c._id.toString() === commentId);
     if (!comment) {
       return res.status(404).json({ message: "Comment not found" });
     }
 
-    const fileUrls = comment.attachments;
-
-    if (fileUrls.length > 0) {
-      try {
-        const dataa=await axios.delete("http://localhost:5000/api/deleteFilesS3", {
-          data: { fileUrls },
-        });
-
-      } catch (error) {
-        console.error("Error deleting cont files:",);
-        return res.status(500).json({ message: "Error deleting commen ffooooiles" });
-      }
-
+    // Delete the comment from the task
     const updateTask = await TaskModel.findOneAndUpdate(
       { _id: taskId },
       { $pull: { comments: { _id: commentId } } },
       { new: true }
-  
     );
     console.log("update bhi ho hgaya mere bhai ", updateTask);
 
     if (!updateTask) {
       return res.status(404).json({ message: "Task not found" });
     }
-
-
 
     // Delete the associated notification for the mention in the comment
     await NotificationModel.deleteMany({
@@ -235,6 +219,9 @@ export const deleteComment = async (req, res) => {
     });
 
     res.status(200).json({ message: "Comment and associated notifications deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting comment:", err);
+    res.status(500).json({ message: "Error deleting comment", error: err.message });
   }
 };
 
