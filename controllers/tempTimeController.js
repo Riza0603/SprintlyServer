@@ -28,17 +28,17 @@ export const startTimer = async (req, res) => {
     };
 
 export const getTime = async (req, res) => {
-    console.log("req recieved ",req.body.date);
+    //console.log("req recieved ",req.body.date);
     try {
         const tempTime = await TempTimeModel.findOne
         ({ userId: req.body.userId, date:req.body.date});
         const time = Date.now()-tempTime.startTime-tempTime.breakTime;
         
-        console.log("Time fetched ",time,tempTime.started);
+        //console.log("Time fetched ",time,tempTime.started);
         res.status(200).json({time,started:tempTime.started}); // Return the saved tempTime
     }
     catch (err) {
-        console.error("Error in getTime:", err.message);
+        //console.error("Error in getTime:", err.message);
         res.status(400).json({ message: err.message });
     }
     };

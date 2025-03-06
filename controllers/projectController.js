@@ -1,7 +1,9 @@
 import ProjectModel from "../models/Projects.js";
 import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
-
+import NotificationModel from "../models/Notification.js";
+import { createNotification } from "./notificationController.js";
+//project creation
 export const createProject = async (req, res) => {
   const { pname, pdescription,projectCreatedBy, pstart, pend,members } = req.body;
 
@@ -15,6 +17,12 @@ export const createProject = async (req, res) => {
       return res.status(400).json({
         message: "Project with the same name already exists",
       });
+    }
+
+    // Fetch the name of the project creator
+    const creator = await UserModel.findById(projectCreatedBy).select("name");
+    if (!creator) {
+      return res.status(404).json({ message: "Project creator not found" });
     }
 
    // Convert array of memberIds into a Map object
@@ -38,6 +46,23 @@ export const createProject = async (req, res) => {
           { $addToSet: { projects: pname } }, 
           { new: true }
         );
+      })
+    );
+
+    await Promise.all(
+      members.map(async (memberId) => {
+        await createNotification({
+          user_id: memberId,
+          type: "Project",
+          message: `You have been added to the project: ${pname}`,
+          entity_id: project._id,
+          metadata: {
+            projectName: pname,
+            createdBy: creator.name,
+            startDate: pstart,
+            endDate: pend,
+          },
+        });
       })
     );
 
@@ -158,33 +183,65 @@ export const getMembers=async(req,res)=>{
   }
 }
 
-//delete member from specific project
-export const deleteMember= async (req,res)=>{
-  try{
-    const memberId=req.params.memberId;
-    const { projectName } = req.body;
-    
+//remove member from project
+export const deleteMember = async (req, res) => {
+  try {
+    const { memberId } = req.params;
+    const { projectName, removedBy } = req.body;
+
+    // Remove member from the project
     const updateProject = await ProjectModel.findOneAndUpdate(
       { pname: projectName },
-      { $unset: { [`members.${memberId}`]: "" } }, 
+      { $unset: { [`members.${memberId}`]: "" } },
       { new: true }
     );
 
     if (!updateProject) {
       return res.status(404).json({ message: "Project not found" });
     }
-    
-    const updateMember= await UserModel.findOneAndUpdate({"_id":memberId},
-      { $pull: { projects: projectName } }, 
+
+    // Remove project reference from the user
+    const updateMember = await UserModel.findOneAndUpdate(
+      { _id: memberId },
+      { $pull: { projects: projectName } }
     );
-    if(!updateMember){
-      return res.status(404).json({ message: "Member not found in project" });
+
+    if (!updateMember) {
+      return res.status(404).json({ message: "User not found in database" });
     }
+
+    // Check if updateProject._id exists
+    if (!updateProject._id) {
+      return res.status(500).json({ message: "Project ID is missing, cannot create notification." });
+    }
+
+    // Log to debug
+    console.log("Creating notification for removal:", {
+      user_id: memberId,
+      entity_id: updateProject._id,
+    });
+
+    // Create a notification for the removed member
+    await NotificationModel.create({
+      user_id: memberId,
+      type: "ProjectRemoval",
+      message: `You have been removed from the project: ${projectName}`,
+      entity_id: updateProject._id, 
+      metadata: {
+        projectName: projectName,
+        removedBy: removedBy || "System",
+      },
+      is_read: false,
+      created_at: new Date(),
+    });
+
     res.status(200).json({ message: "Member deleted successfully" });
-  }catch(err){
-    res.status(500).json({ message: "Error deleting member", err });
+  } catch (err) {
+    console.error("Error deleting member:", err);
+    res.status(500).json({ message: "Error deleting member", error: err.message });
   }
-}
+};
+
 
 //add members to project
 export const addMember = async (req, res) => {
