@@ -319,3 +319,20 @@ export const fetchDetails = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+//get projrct name by creator id
+export const getProjectByManager=async(req,res)=>{
+  try{
+    const {projectCreatedById}=req.params;
+    const project=await ProjectModel.find({projectCreatedBy:projectCreatedById},"pname");
+    console.log("sf",project)
+    if(!project){
+      return res.status(404).json({message:"No project found"})
+    }
+    res.status(200).json(project);  
+}
+catch (err) {
+  console.error("Error:", err);
+  res.status(500).json({ error: err.message });
+}
+};
