@@ -304,7 +304,7 @@ export const getMembers = async (req, res) => {
       return res.status(400).json({ message: "No members found in the project" });
     }
 
-    const membersData = await UserModel.find({ _id: { $in: memberIds.map(id => new mongoose.Types.ObjectId(id)) } }, "name email"git);
+    const membersData = await UserModel.find({ _id: { $in: memberIds.map(id => new mongoose.Types.ObjectId(id)) } }, "name email");
 
     const members = membersData.map((member) => ({
       _id: member._id,
