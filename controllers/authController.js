@@ -231,7 +231,7 @@ export const getUser = async (req, res) => {
 
   try {
 
-    const user = await User.findOne({ email }).select("name email phone experience role reportTo adminAccess");
+    const user = await User.findOne({ email }).select("name email phone experience role profilePicUrl reportTo adminAccess");
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
