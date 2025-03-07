@@ -29,6 +29,7 @@ export const startTimer = async (req, res) => {
 
    
     export const getTime = async (req, res) => {
+        console.log("req recieved ",req.body.date);
         try {
             const tempTime = await TempTimeModel.findOne
             ({ userId: req.body.userId, date:req.body.date});
@@ -47,27 +48,33 @@ export const startTimer = async (req, res) => {
         }
         }
         catch (err) {
+            console.error("Error in getTime:", err.message);
             res.status(400).json({ message: err.message });
         }
         };
 
 
         export const pauseResumeTimer = async (req, res) => {
+            // console.log("pause / resume request recieved ",req.body);
             try {
                 
                 if(req.body.paused===true){
                     const tempTime = await TempTimeModel.findOneAndUpdate
                     ({ userId: req.body.userId, date:req.body.date},{paused:req.body.paused,pausedAt:req.body.pausedAt},{new:true});            
+                    // console.log("timer Paused", tempTime);
                     res.status(200).json(tempTime);
                 }else{
                     const tempTime = await TempTimeModel.findOneAndUpdate
                     ({ userId: req.body.userId, date:req.body.date},{paused:req.body.paused},{new:true});
                     tempTime.breakTime = tempTime.breakTime + Date.now()-tempTime.pausedAt;
                     await tempTime.save();
+                    // console.log("timer Resume", tempTime);
                     res.status(200).json(tempTime);
                 }
+                 // Return the saved tempTime
             }
             catch (err) {
+                console.error("Error in getTime:", err.message);
                 res.status(400).json({ message: err.message });
             }
             };
@@ -153,19 +160,34 @@ export const stopTimer = async (req, res) => {
     }
 
 
-export const fetchTimeEntries = async (req, res) => {
-  try {
-    const userId  = req.params.userId; // Get userId from URL parameters
-    // Find the timesheet document for that specific user
-    const timeSheetDoc = await TimeSheetModel.findOne({ userId });
-    if (!timeSheetDoc) {
-      return res.status(404).json({ message: "No timesheet found for this user." });
-    }
-    res.status(200).json(timeSheetDoc.timeSheet);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+    export const fetchTimeEntries = async (req, res) => {
+        try {
+          const userId = req.params.userId;
+          const timeSheetDoc = await TimeSheetModel.findOne({ userId });
+      
+          if (!timeSheetDoc) {
+            return res.status(404).json({ message: "No timesheet found for this user." });
+          }
+          const timeEntries = [];
+          timeSheetDoc.timeSheet.forEach(sheet => {
+            sheet.projectsHours.forEach(prjHr => {
+              timeEntries.push({
+                projectName: prjHr.projectName,
+                date: sheet.date,
+                time: prjHr.time,
+                comment: prjHr.comment || "No Comments",
+                status: prjHr.status || "Pending"
+            
+              });
+            });
+          });
+      
+          res.status(200).json(timeEntries);
+        } catch (err) {
+          res.status(500).json({ message: err.message });
+        }
+      };
+      
 
 
 
@@ -201,27 +223,34 @@ export const getAllUserTimesheet = async (req, res) => {
 
   export const updateTimeSheetStatus = async (req, res) => {
     try {
-        console.log("updating ------")
-        console.log(req.body);
-      const { userId, date, status, comments } = req.body;
+        const { userId, projectName, status, comments } = req.body;
+        console.log(userId, projectName, status, comments )
+        // Find the specific user and update the project inside any timeSheet entry
+        const updatedEntry = await TimeSheetModel.findOneAndUpdate(
+            { userId, "timeSheet.projectsHours.projectName": projectName },
+            { 
+                $set: { 
+                    "timeSheet.$[].projectsHours.$[inner].status": status,
+                    "timeSheet.$[].projectsHours.$[inner].comment": comments 
+                }
+            },
+            {
+                new: true,
+                arrayFilters: [
+                    { "inner.projectName": projectName }
+                ]
+            }
+        );
 
-      // Find one entry matching userId and date and update it.
-      const updatedEntry = await TimeSheetModel.findOneAndUpdate(
-        { userId, "timeSheet.date": date },
-        { $set: { "timeSheet.$.status": status, "timeSheet.$.comment": comments } },
-        { new: true }
-      );
-      if (!updatedEntry) {
-        return res.status(404).json({ message: "Entry not found" });
-      }
-      res.status(200).json(updatedEntry);
+        if (!updatedEntry) {
+            return res.status(404).json({ message: "Project entry not found" });
+        }
+
+        res.status(200).json(updatedEntry);
     } catch (err) {
-      console.console.error();
-      
-      res.status(500).json({ message: err.message });
+        console.error("Error updating timesheet:", err);
+        res.status(500).json({ message: "Internal Server Error", error: err.message });
     }
-
-
    
   };
   
