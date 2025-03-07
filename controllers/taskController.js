@@ -79,7 +79,7 @@ export const getTasks = async (req, res) => {
 export const addComment = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { username, text, userId } = req.body;
+    const { username, text, userId, attachments } = req.body;
 
     if (!username || !text) {
       return res.status(400).json({ message: "Username and text are required." });
@@ -93,9 +93,10 @@ export const addComment = async (req, res) => {
 
     const newComment = {
       _id: new mongoose.Types.ObjectId(),
-      userId: new mongoose.Types.ObjectId(userId),
+      userId: userId,
       username: username,
       text,
+      attachments: attachments,
     };
 
     // Update task with new comment
