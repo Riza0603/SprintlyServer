@@ -23,6 +23,7 @@ const handleErrors = (err, res) => {
 export const login = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
+    
 
     if (!user) {
       return res.json({ success: false, message: "No such user! Please Sign up." });
@@ -45,15 +46,7 @@ export const login = async (req, res) => {
     res.json({
       success: true,
       message: "Login Successful!",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        experience: user.experience,
-        reportTo: user.reportTo,
-      },
+      user:user,
       token,
     });
 
@@ -247,7 +240,7 @@ export const getUser = async (req, res) => {
 //get the list of all users
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("name email experience role reportTo"); // Fetch all users
+    const users = await User.find().select("name email experience role reportTo "); // Fetch all users
     res.json({ success: true, users });
   } catch (error) {
     handleErrors(error, res);
