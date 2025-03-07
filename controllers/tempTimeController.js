@@ -206,6 +206,7 @@ export const getAllUserTimesheet = async (req, res) => {
                     userName,
                     date: sheet.date,
                     projectName: prjHr.projectName,
+                    projectHoursId:prjHr._id,
                     time: prjHr.time,
                     status: prjHr.status,
                     comment: prjHr.comment
@@ -223,11 +224,11 @@ export const getAllUserTimesheet = async (req, res) => {
 
   export const updateTimeSheetStatus = async (req, res) => {
     try {
-        const { userId, projectName, status, comments } = req.body;
-        console.log(userId, projectName, status, comments )
+        const { userId, projectHoursId, status, comments } = req.body;
+        console.log(userId, projectHoursId, status, comments )
         // Find the specific user and update the project inside any timeSheet entry
         const updatedEntry = await TimeSheetModel.findOneAndUpdate(
-            { userId, "timeSheet.projectsHours.projectName": projectName },
+            { userId, "timeSheet.projectsHours._id": projectHoursId },
             { 
                 $set: { 
                     "timeSheet.$[].projectsHours.$[inner].status": status,
@@ -237,7 +238,7 @@ export const getAllUserTimesheet = async (req, res) => {
             {
                 new: true,
                 arrayFilters: [
-                    { "inner.projectName": projectName }
+                    { "inner._id": projectHoursId }
                 ]
             }
         );
