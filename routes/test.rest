@@ -20,9 +20,9 @@
 # }
 
 //timesheet fetching by project name
-PUT   http://localhost:5000/api/update-project
+GET  http://localhost:5000/admin/get_project_progress
 Content-Type: application/json
 
 {
-     "projectId": "67b2e4dc28d7cc5f1379ab4b"
+     "projectName": "Patent Exchange"
 }
