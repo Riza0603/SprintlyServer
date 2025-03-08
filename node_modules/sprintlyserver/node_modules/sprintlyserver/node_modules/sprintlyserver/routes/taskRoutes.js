@@ -4,7 +4,7 @@ import { addComment, addsubTask, addTask, deleteComment, deleteSubTask, fetchTas
 const router = express.Router();
 
 // Task Routes
-router.post("/tasks", addTask); // Add Task
+router.post("/addTasks", addTask); // Add Task
 router.get("/tasks", getTasks); // Fetch Tasks
 router.post("/editTask/:taskId",updateTask);//edit task
 router.post("/addComment/:taskId",addComment);//add comments

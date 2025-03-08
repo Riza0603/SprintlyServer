@@ -1,18 +1,4 @@
 import mongoose from "mongoose";
-import { v4 as uuidv4 } from "uuid";
-
-// const MemberSchema = new mongoose.Schema({
-//   name: { type: String, required: true },
-// }, { _id: true }); // Enable automatic _id generation
- 
-
-// const MemberSchema = new mongoose.Schema({
-//   _id: { type: mongoose.Schema.Types.ObjectId, required: true }, // Store member ID
-//   name: { type: String, required: true },
-//   email:{type:String,required:true},
-//   position: { type: String, default: "Employee" },
-// });
-
 
 const ProjectSchema = new mongoose.Schema({
   pname: String,
@@ -29,6 +15,8 @@ const ProjectSchema = new mongoose.Schema({
     }, { _id: false }) 
   },
   pstatus: { type: String, default: "In-Progress" },
+
+  pAttachments:[{ type: String }],
 });
 
 const ProjectModel = mongoose.model("Projects", ProjectSchema);

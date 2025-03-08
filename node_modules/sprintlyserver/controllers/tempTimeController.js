@@ -1,10 +1,9 @@
 import TempTimeModel from "../models/TempTime.js";
 import TimeSheetModel from "../models/TimeSheets.js";
+import UserModel from "../models/User.js";
 
 
 export const startTimer = async (req, res) => {
-   
-    
     try {
         const { userId, startTime, elapsedTime, breakTime } = req.body;
     
@@ -24,16 +23,19 @@ export const startTimer = async (req, res) => {
     
         res.status(201).json(tempTime); // Return the saved tempTime
     } catch (err) {
-        console.error("Error in addTempTime:", err.message);
         res.status(400).json({ message: err.message });
     }
     };
 
+   
     export const getTime = async (req, res) => {
         console.log("req recieved ",req.body.date);
         try {
             const tempTime = await TempTimeModel.findOne
             ({ userId: req.body.userId, date:req.body.date});
+            if(tempTime){
+
+           
             if(tempTime.paused===true){
                 const time = tempTime.pausedAt-tempTime.startTime-tempTime.breakTime;
                 // console.log("Time fetched ",time,tempTime.started);
@@ -43,6 +45,7 @@ export const startTimer = async (req, res) => {
                 // console.log("Time fetched ",time,tempTime.started);
                 res.status(200).json({time,started:tempTime.started,paused:tempTime.paused,project:tempTime.projectName}); // Return the saved tempTime
             }
+        }
         }
         catch (err) {
             console.error("Error in getTime:", err.message);
@@ -78,7 +81,6 @@ export const startTimer = async (req, res) => {
 
             
 export const stopTimer = async (req, res) => {
-    console.log("Timer Stopped ", req.body);
     try {
         const tempTime = await TempTimeModel.findOneAndUpdate({userId:req.body.userId,date:req.body.date},{elapsedTime:req.body.elapsedTime,started:false},{new:true});
         if (!tempTime) {
@@ -153,30 +155,103 @@ export const stopTimer = async (req, res) => {
 
         res.status(201).json(tempTime); // Return the saved tempTime
     } catch (err) {
-        console.error("Error in addTempTime:", err.message);
         res.status(400).json({ message: err.message });
     }
     }
 
-// In your timeController.js
-// Updated endpoint: GET /api/fetchTime/:userId
-export const fetchTimeEntries = async (req, res) => {
-  try {
-    const userId  = req.params.userId; // Get userId from URL parameters
-    // Find the timesheet document for that specific user
-    const timeSheetDoc = await TimeSheetModel.findOne({ userId });
-    if (!timeSheetDoc) {
-      return res.status(404).json({ message: "No timesheet found for this user." });
-    }
 
-    // Return the flattened timeSheet array (if you want to work directly with entries)
-    res.status(200).json(timeSheetDoc.timeSheet);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+    export const fetchTimeEntries = async (req, res) => {
+        try {
+          const userId = req.params.userId;
+          const timeSheetDoc = await TimeSheetModel.findOne({ userId });
+      
+          if (!timeSheetDoc) {
+            return res.status(404).json({ message: "No timesheet found for this user." });
+          }
+          const timeEntries = [];
+          timeSheetDoc.timeSheet.forEach(sheet => {
+            sheet.projectsHours.forEach(prjHr => {
+              timeEntries.push({
+                projectName: prjHr.projectName,
+                date: sheet.date,
+                time: prjHr.time,
+                comment: prjHr.comment || "No Comments",
+                status: prjHr.status || "Pending"
+            
+              });
+            });
+          });
+      
+          res.status(200).json(timeEntries);
+        } catch (err) {
+          res.status(500).json({ message: err.message });
+        }
+      };
+      
 
 
 
+export const getAllUserTimesheet = async (req, res) => {
+    try {
+        console.log("fetching the time sheet...");
+        const entries = await TimeSheetModel.find();
+        const result = [];
+        for (const entry of entries) {
+            const user = await UserModel.findById(entry.userId).select("name");
+            const userName = user ? user.name : "Unknown User";
+            for (const sheet of entry.timeSheet) {
+              for(const prjHr of sheet.projectsHours){
+                result.push({
+                    userId: entry.userId,
+                    userName,
+                    date: sheet.date,
+                    projectName: prjHr.projectName,
+                    projectHoursId:prjHr._id,
+                    time: prjHr.time,
+                    status: prjHr.status,
+                    comment: prjHr.comment
+                });
+            }
+            }
+        }
+        console.log(result);
+        res.status(200).json(result);
+      } catch (err) {
+        res.status(500).json({ message: err.message });
+      }
+  };
   
+
+  export const updateTimeSheetStatus = async (req, res) => {
+    try {
+        const { userId, projectHoursId, status, comments } = req.body;
+        console.log(userId, projectHoursId, status, comments )
+        // Find the specific user and update the project inside any timeSheet entry
+        const updatedEntry = await TimeSheetModel.findOneAndUpdate(
+            { userId, "timeSheet.projectsHours._id": projectHoursId },
+            { 
+                $set: { 
+                    "timeSheet.$[].projectsHours.$[inner].status": status,
+                    "timeSheet.$[].projectsHours.$[inner].comment": comments 
+                }
+            },
+            {
+                new: true,
+                arrayFilters: [
+                    { "inner._id": projectHoursId }
+                ]
+            }
+        );
+
+        if (!updatedEntry) {
+            return res.status(404).json({ message: "Project entry not found" });
+        }
+
+        res.status(200).json(updatedEntry);
+    } catch (err) {
+        console.error("Error updating timesheet:", err);
+        res.status(500).json({ message: "Internal Server Error", error: err.message });
+    }
+   
+  };
   

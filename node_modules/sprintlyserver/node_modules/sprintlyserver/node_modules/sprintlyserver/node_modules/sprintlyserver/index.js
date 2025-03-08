@@ -5,8 +5,10 @@ import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import projectRoute from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
-import tempTimeRoutes from "./routes/tempTimeRoutes.js";
+import uploadRoutes from "./routes/uploadRoutes.js";
 
+import tempTimeRoutes from "./routes/tempTimeRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 const app = express();  // Initialize app before using it
 
@@ -20,6 +22,11 @@ app.use("/auth", authRoutes);
 app.use("/api", projectRoute);
 app.use("/api", taskRoutes);
 app.use("/api",authRoutes);
+app.use("/api", uploadRoutes);
+
+
+
 app.use("/api",tempTimeRoutes)
+app.use("/api",notificationRoutes)
 
 app.listen(5000, () => console.log("Server has started"));
