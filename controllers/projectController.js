@@ -1,13 +1,19 @@
 import ProjectModel from "../models/Projects.js";
 import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
+import NotificationModel from "../models/Notification.js";
+import { createNotification } from "./notificationController.js";
+import mongoose from "mongoose";
+import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/emailService.js";;
 
+//create a new project
 export const createProject = async (req, res) => {
-  const { pname, pdescription,projectCreatedBy, pstart, pend,members } = req.body;
+  const { pname, pdescription, projectCreatedBy, pstart, pend, members } = req.body;
 
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
   }
+
   try {
     const existingProject = await ProjectModel.findOne({ pname })
     .collation({ locale: "en", strength: 2 });  //case insesitive search
@@ -15,6 +21,12 @@ export const createProject = async (req, res) => {
       return res.status(400).json({
         message: "Project with the same name already exists",
       });
+    }
+
+    // Fetch the name of the project creator
+    const creator = await UserModel.findById(projectCreatedBy).select("name");
+    if (!creator) {
+      return res.status(404).json({ message: "Project creator not found" });
     }
 
    // Convert array of memberIds into a Map object
@@ -27,22 +39,44 @@ export const createProject = async (req, res) => {
      };
    });
 
-   
-    const project = await ProjectModel.create({ pname, pdescription,projectCreatedBy, pstart, pend , members:membersMap });
+    const project = await ProjectModel.create({ pname, pdescription, projectCreatedBy, pstart, pend, members: membersMap });
 
-    //add project to user table
-    await Promise.all(
+    const users = await Promise.all(
       members.map(async (memberId) => {
-        await UserModel.findByIdAndUpdate(
+        const user = await UserModel.findByIdAndUpdate(
           memberId,
-          { $addToSet: { projects: pname } }, 
+          { $addToSet: { projects: pname } },
           { new: true }
         );
+        return user ? user.email : null; // Collect email addresses
       })
     );
 
+    await Promise.all(
+      members.map(async (memberId) => {
+        await createNotification({
+          user_id: memberId,
+          type: "Project",
+          message: `You have been added to the project: ${pname}`,
+          entity_id: project._id,
+          metadata: {
+            projectName: pname,
+            createdBy: creator.name,
+            startDate: pstart,
+            endDate: pend,
+          },
+        });
+      })
+    );
+
+    const emails = users.filter(email => email);
+
+    if (emails.length > 0) {
+      await sendProjectAdditionEmail(emails, pname, pdescription, pstart, pend);
+    }
+
     return res.status(201).json({
-      message: "Project created successfully",
+      message: "Project created successfully and emails sent",
       project,
     });
   } catch (error) {
@@ -53,6 +87,8 @@ export const createProject = async (req, res) => {
     });
   }
 };
+
+
 
 //fetches projects by
 export const fetchProjects = async (req, res) => {
@@ -76,6 +112,111 @@ export const getProjectByName=async(req,res)=>{
       res.status(500).json({message:"Error in getProjectByName()"},err)
   }
 }
+
+
+export const getProjectFiles = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    if (!projectId) return res.status(400).json({ error: "Project ID is required" });
+
+    const project = await ProjectModel.findById(projectId);
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    res.status(200).json({ files: project.pAttachments });
+  } catch (error) {
+    console.error("Error fetching project files:", error);
+    res.status(500).json({ error: "Failed to fetch project files" });
+  }
+}
+
+//fetches project data by id
+export const fetchProjectData = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const project = await ProjectModel.findById(projectId);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json(project);
+  } catch (error) {
+    console.error("Error fetching project data:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
+
+export const updateProjectDeletedFile = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { removeAttachment } = req.body;
+
+    if (!removeAttachment) {
+      return res.status(400).json({ message: "Filename to remove is required." });
+    }
+
+    // Use `$pull` to remove the specified filename from `pAttachments`
+    const updatedProject = await ProjectModel.findOneAndUpdate(
+      { _id: projectId },
+      { $pull: { pAttachments: removeAttachment } }, // Remove the specific file
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json({ message: "File removed successfully", updatedProject });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
+
+
+
+
+
+
+export const updateProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { newAttachment, ...updateData } = req.body;
+
+    if (!projectId) return res.status(400).json({ error: "Project ID is required" });
+
+    const project = await ProjectModel.findById(projectId);
+
+
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    // Append new attachment to existing pAttachments
+
+    const updateFields = {};
+
+    if (newAttachment) {
+      updateFields.$push = { pAttachments: newAttachment };  // Add new attachment to pAttachments
+    }
+    const updatedProject = await ProjectModel.findOneAndUpdate(
+      { _id: projectId },
+      updateFields,
+      { new: true }  // `new: true` returns the updated document
+    );
+
+    
+
+    res.status(200).json({ message: "Project updated successfully", updatedProject });
+  } catch (error) {
+    console.error("Update project error:", error);
+    res.status(500).json({ error: "Failed to update project" });
+  }
+};
 
 
 
@@ -145,49 +286,75 @@ export const updateProjectSettings = async (req, res) => {
 };
 
 
-//get members
-export const getMembers=async(req,res)=>{
-  try{
-    const projName=req.params.projectName;
-    const members=await UserModel.find({projects:projName})
-    
-    res.status(200).json(members)
-  }catch(error){
-    console.log("error in getMembers",error.message)
+//get position details from project and name from register
+export const getMembers = async (req, res) => {
+  try {
+    const projName = req.params.projectName;
+    const project = await ProjectModel.findOne({ pname: projName });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    // Convert Mongoose Map to JavaScript Map
+    const membersMap = new Map(project.members);
+    const memberIds = Array.from(membersMap.keys()); // Get keys correctly
+
+    if (memberIds.length === 0) {
+      return res.status(400).json({ message: "No members found in the project" });
+    }
+
+    const membersData = await UserModel.find({ _id: { $in: memberIds.map(id => new mongoose.Types.ObjectId(id)) } }, "name email");
+
+    const members = membersData.map((member) => ({
+      _id: member._id,
+      name: member.name,
+      email: member.email,
+      role: membersMap.get(member._id.toString()).position,
+    }));
+
+    res.status(200).json(members);
+  } catch (error) {
+    console.error("Error in getMembers", error.message);
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 
+//remove member from project
+export const deleteMember = async (req, res) => {
+  try {
+    const { memberId } = req.params;
+    const { projectName, removedBy } = req.body;
 
-
-//delete member from specific project
-export const deleteMember= async (req,res)=>{
-  try{
-    const memberId=req.params.memberId;
-    const { projectName } = req.body;
-    
+    // Remove member from the project
     const updateProject = await ProjectModel.findOneAndUpdate(
       { pname: projectName },
-      { $unset: { [`members.${memberId}`]: "" } }, 
+      { $unset: { [`members.${memberId}`]: "" } },
       { new: true }
     );
 
     if (!updateProject) {
       return res.status(404).json({ message: "Project not found" });
     }
-    
-    const updateMember= await UserModel.findOneAndUpdate({"_id":memberId},
-      { $pull: { projects: projectName } }, 
+
+    const user = await UserModel.findByIdAndUpdate(
+      memberId,
+      { $pull: { projects: projectName } },
+      { new: true }
     );
-    if(!updateMember){
+
+    if (!user) {
       return res.status(404).json({ message: "Member not found in project" });
     }
-    res.status(200).json({ message: "Member deleted successfully" });
-  }catch(err){
-    res.status(500).json({ message: "Error deleting member", err });
+    await sendProjectRemovalEmail(user,projectName);
+    res.status(200).json({ message: "Member deleted successfully and email sent" });
+  } catch (err) {
+    console.error("Error deleting member:", err);
+    res.status(500).json({ message: "Error deleting member", error: err.message });
   }
-}
+};
+
 
 //add members to project
 export const addMember = async (req, res) => {
@@ -212,6 +379,8 @@ export const addMember = async (req, res) => {
       },
       { new: true }
     );
+
+    await sendProjectAdditionEmail([member.email], projectName, project.pdescription, project.pstart, project.pend);
 
     res.status(200).json(member);
   } catch (err) {
@@ -318,4 +487,21 @@ export const fetchDetails = async (req, res) => {
     console.error("Error:", err);
     res.status(500).json({ error: err.message });
   }
+};
+
+//get projrct name by creator id
+export const getProjectByManager=async(req,res)=>{
+  try{
+    const {projectCreatedById}=req.params;
+    const project=await ProjectModel.find({projectCreatedBy:projectCreatedById},"pname");
+   
+    if(!project){
+      return res.status(404).json({message:"No project found"})
+    }
+    res.status(200).json(project);  
+}
+catch (err) {
+  console.error("Error:", err);
+  res.status(500).json({ error: err.message });
+}
 };
