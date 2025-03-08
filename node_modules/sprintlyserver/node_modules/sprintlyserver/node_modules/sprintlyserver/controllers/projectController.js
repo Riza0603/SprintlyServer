@@ -498,7 +498,7 @@ catch (err) {
 }
 };
 
-//Update Project main
+//Update Project admin
 export const updateProjects = async (req, res) => {
   try {
     console.log(req.body);
