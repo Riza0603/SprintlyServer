@@ -27,6 +27,7 @@
     "nodemailer": "^6.9.16",
     "nodemon": "^3.1.9",
     "path": "^0.12.7",
+    "sprintlyserver": "file:",
     "uuid": "^11.0.5"
   },
   "description": ""

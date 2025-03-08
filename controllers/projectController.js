@@ -176,14 +176,7 @@ export const updateProjectDeletedFile = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
+//aws updateProject
 export const updateProject = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -217,7 +210,6 @@ export const updateProject = async (req, res) => {
     res.status(500).json({ error: "Failed to update project" });
   }
 };
-
 
 
 
@@ -505,3 +497,54 @@ catch (err) {
   res.status(500).json({ error: err.message });
 }
 };
+
+//Update Project main
+export const updateProjects = async (req, res) => {
+  try {
+    console.log(req.body);
+    const { projectId } = req.params;
+
+    // If no update data is provided, fetch project details
+    if (Object.keys(req.body).length === 1) {
+      const project = await ProjectModel.findById(projectId);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      return res.status(200).json({ project });
+    }
+    const updateData = req.body;
+
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json({ message: "Project updated successfully", project: updatedProject });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+//Delete project
+
+export const deleteProject = async (req, res) => {
+  try {
+    const { projectId } = req.body;
+
+    const deletedProject = await ProjectModel.findByIdAndDelete(projectId);
+    
+    if (!deletedProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json({ message: "Project deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+
+}
