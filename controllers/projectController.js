@@ -429,54 +429,68 @@ export const fetchProjectsById = async (req, res) => {
 
 
 //To  calculate workload per member
-export const fetchDetails = async (req, res) => {
+export const fetchWorkLoad = async (req, res) => {
   try {
     const { pname } = req.query;
 
-    const users = await UserModel.find({ projects: pname });
-    if (!users || users.length === 0) return res.status(404).json({ message: "Project not found" });
+    const project = await ProjectModel.findOne({ pname });
+    if (!project || !project.members) {
+      return res.status(404).json({ message: "Project not found" });
+    }
 
-    const memberNames = users.map((user) => user.name);
+    const memberIds = Array.from(project.members.keys()).filter(id => mongoose.Types.ObjectId.isValid(id));
 
-    const tasks = await TaskModel.find({ assignee: { $in: memberNames }, projectName: pname });
+    if (memberIds.length === 0) {
+      return res.status(404).json({ message: "No valid members found" });
+    }
 
-    // Edge case: No tasks found
-    if (tasks.length === 0) {
+    const members = await UserModel.find({ _id: { $in: memberIds } }).select("name _id");
+    if (!members.length) {
+      return res.status(404).json({ message: "Members not found" });
+    }
+
+    const tasks = await TaskModel.find({
+      assigneeId: { $in: members.map(m => m._id) },
+      projectName: pname
+    });
+
+    if (!tasks || tasks.length === 0) {
       return res.json({
         projectName: pname,
-        members: users.map((user) => ({
-          id: user._id,
-          name: user.name,
+        members: members.map((member) => ({
+          id: member._id,
+          name: member.name,
           workload: 0,
           workloadPercentage: 0,
         })),
       });
     }
 
-    const totalTasks = tasks.length; 
-    let totalWeightSum = 0; 
+    const totalTasks = tasks.length;
+    let totalWeightSum = 0;
 
-    const workloadData = users.map((user) => {
-      const userTasks = tasks.filter((task) => task.assignee === user.name);
+    const workloadData = members.map((member) => {
+      const userTasks = tasks.filter((task) => task.assigneeId.toString() === member._id.toString());
 
       const workloadScore = userTasks.reduce((total, task) => {
         const priorityWeight = task.priority === "High" ? 3 : task.priority === "Medium" ? 2 : 1;
-        return total + priorityWeight;}, 0);
+        return total + priorityWeight;
+      }, 0);
 
       const weight = totalTasks > 0 ? workloadScore / totalTasks : 0;
       totalWeightSum += weight;
 
-      return { id: user._id, name: user.name, workloadScore, weight };
+      return { id: member._id, name: member.name, workloadScore, weight };
     });
 
     const finalWorkloadData = workloadData.map((member) => {
       const workloadPercentage = totalWeightSum > 0 ? Math.round((member.weight / totalWeightSum) * 100) : 0;
 
-      return { 
-        id: member.id, 
-        name: member.name, 
-        workload: member.workloadScore, 
-        workloadPercentage: parseFloat(workloadPercentage)
+      return {
+        id: member.id,
+        name: member.name,
+        workload: member.workloadScore,
+        workloadPercentage: parseFloat(workloadPercentage),
       };
     });
 
@@ -488,6 +502,8 @@ export const fetchDetails = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
 
 //get projrct name by creator id
 export const getProjectByManager=async(req,res)=>{
