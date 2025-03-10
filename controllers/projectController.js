@@ -501,12 +501,12 @@ catch (err) {
 //Update Project admin
 export const updateProjects = async (req, res) => {
   try {
-    console.log(req.body);
     const { projectId } = req.params;
 
     // If no update data is provided, fetch project details
-    if (Object.keys(req.body).length === 1) {
+    if (Object.keys(req.body).length >= 1) {
       const project = await ProjectModel.findById(projectId);
+      console.log(project);
       if (!project) {
         return res.status(404).json({ message: "Project not found" });
       }
