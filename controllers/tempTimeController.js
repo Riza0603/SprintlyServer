@@ -220,8 +220,7 @@ export const getAllUserTimesheet = async (req, res) => {
         res.status(500).json({ message: err.message });
       }
   };
-  
-
+ 
   export const updateTimeSheetStatus = async (req, res) => {
     try {
         const { userId, projectHoursId, status, comments } = req.body;
@@ -242,16 +241,13 @@ export const getAllUserTimesheet = async (req, res) => {
                 ]
             }
         );
-
         if (!updatedEntry) {
             return res.status(404).json({ message: "Project entry not found" });
         }
-
         res.status(200).json(updatedEntry);
     } catch (err) {
         console.error("Error updating timesheet:", err);
         res.status(500).json({ message: "Internal Server Error", error: err.message });
     }
-   
   };
   
