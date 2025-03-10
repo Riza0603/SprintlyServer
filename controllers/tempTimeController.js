@@ -29,7 +29,6 @@ export const startTimer = async (req, res) => {
 
    
     export const getTime = async (req, res) => {
-        console.log("req recieved ",req.body.date);
         try {
             const tempTime = await TempTimeModel.findOne
             ({ userId: req.body.userId, date:req.body.date});
