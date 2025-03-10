@@ -20,7 +20,7 @@ router.post("/updateProjectSettings/:projectId", updateProjectSettings);
 router.get("/project-details",fetchDetails);
 router.post("/getProjectFiles/:projectId",getProjectFiles);router.get("/getProjectByCreator/:projectCreatedById",getProjectByManager);
 router.post("/updateProjects/:projectId",updateProjects);
-router.delete("/delete-project",deleteProject);
+router.delete("/deleteProject/:projectId",deleteProject);
 
 
 router.post("/getProjectFiles/:projectId",getProjectFiles);

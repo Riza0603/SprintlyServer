@@ -534,7 +534,7 @@ export const updateProjects = async (req, res) => {
 
 export const deleteProject = async (req, res) => {
   try {
-    const { projectId } = req.body;
+    const { projectId } = req.params;
 
     const deletedProject = await ProjectModel.findByIdAndDelete(projectId);
     
