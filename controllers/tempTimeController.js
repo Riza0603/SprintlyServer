@@ -118,7 +118,7 @@ export const stopTimer = async (req, res) => {
         
                     // Update project time if project exists
                     const updatedProjectsHours = entry.projectsHours.map(project => {
-                        if (project.projectName === tempTime.projectName) {
+                        if (project.projectName === tempTime.projectName  && project.status === "Pending") {
                             projectFound = true;
                             return { ...project, time: project.time + req.body.elapsedTime };
                         }
