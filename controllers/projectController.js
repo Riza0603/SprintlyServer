@@ -499,21 +499,65 @@ catch (err) {
 };
 
 //Update Project admin
+// export const updateProjects = async (req, res) => {
+//   try {
+//     const { projectId } = req.params;
+
+//     // If no update data is provided, fetch project details
+//     if (Object.keys(req.body).length >= 1) {
+//       const project = await ProjectModel.findById(projectId);
+//       console.log(project);
+//       if (!project) {
+//         return res.status(404).json({ message: "Project not found" });
+//       }
+//       //return res.status(200).json({ project });
+//     }
+//     const updateData = req.body;
+
+//     const updatedProject = await ProjectModel.findByIdAndUpdate(
+//       projectId,
+//       { $set: updateData },
+//       { new: true, runValidators: true }
+//     );
+
+//     if (!updatedProject) {
+//       return res.status(404).json({ message: "Project not found" });
+//     }
+
+//     res.status(200).json({ message: "Project updated successfully", project: updatedProject });
+//   } catch (error) {
+//     res.status(500).json({ message: "Internal Server Error", error: error.message });
+//   }
+// };
+
+// temp update admin project
+
 export const updateProjects = async (req, res) => {
   try {
     const { projectId } = req.params;
-
-    // If no update data is provided, fetch project details
-    if (Object.keys(req.body).length >= 1) {
-      const project = await ProjectModel.findById(projectId);
-      console.log(project);
-      if (!project) {
-        return res.status(404).json({ message: "Project not found" });
-      }
-      return res.status(200).json({ project });
-    }
     const updateData = req.body;
 
+    // Validate: Check if request body is empty
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "No update data provided" });
+    }
+
+    // Handle members update separately if provided
+    if (updateData.members) {
+      Object.keys(updateData.members).forEach((memberId) => {
+        Object.keys(updateData.members[memberId]).forEach((key) => {
+          updateData[`members.${memberId}.${key}`] = updateData.members[memberId][key];
+        });
+      });
+      delete updateData.members; // Remove the original object to prevent nesting issues
+    }
+
+    // Handle attachments update if it's an array
+    if (updateData.pAttachments) {
+      updateData.pAttachments = { $each: updateData.pAttachments };
+    }
+
+    // Perform update
     const updatedProject = await ProjectModel.findByIdAndUpdate(
       projectId,
       { $set: updateData },
@@ -529,6 +573,7 @@ export const updateProjects = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
+
 
 //Delete project
 

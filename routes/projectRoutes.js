@@ -18,7 +18,8 @@ router.delete("/deleteUser/:memberId",deleteUser);
 router.post("/updateGlobalSettings", updateGlobalSettings);
 router.post("/updateProjectSettings/:projectId", updateProjectSettings);
 router.get("/project-details",fetchDetails);
-router.post("/getProjectFiles/:projectId",getProjectFiles);router.get("/getProjectByCreator/:projectCreatedById",getProjectByManager);
+router.post("/getProjectFiles/:projectId",getProjectFiles);
+router.get("/getProjectByCreator/:projectCreatedById",getProjectByManager);
 router.post("/updateProjects/:projectId",updateProjects);
 router.delete("/deleteProject/:projectId",deleteProject);
 
