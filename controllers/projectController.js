@@ -509,14 +509,13 @@ export const updateProjects = async (req, res) => {
       return res.status(400).json({ message: "No update data provided" });
     }
 
-    // Handle members update separately if provided
-    if (updateData.members) {
-      Object.keys(updateData.members).forEach((memberId) => {
-        Object.keys(updateData.members[memberId]).forEach((key) => {
-          updateData[`members.${memberId}.${key}`] = updateData.members[memberId][key];
-        });
+     // member update logic for Map type Project.js
+     if (updateData.members) {
+      const formattedMembers = {};
+      updateData.members.forEach((memberId) => {
+        formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true, position: "Employee" }; // Default values
       });
-      delete updateData.members; // Remove the original object to prevent nesting issues
+      updateData.members = formattedMembers; // Replace the existing Map properly
     }
 
     // Handle attachments update if it's an array
