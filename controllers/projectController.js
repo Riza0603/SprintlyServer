@@ -530,8 +530,7 @@ export const updateProjects = async (req, res) => {
   }
 };
 
-//Delete project
-
+//Delete project admin
 export const deleteProject = async (req, res) => {
   try {
     const { projectId } = req.params;
