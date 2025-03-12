@@ -190,6 +190,7 @@ export const stopTimer = async (req, res) => {
       
 
 
+//Fetching all the timesheet for the pending projects with user details
 
 export const getAllUserTimesheet = async (req, res) => {
     try {
@@ -255,3 +256,83 @@ export const getAllUserTimesheet = async (req, res) => {
    
   };
   
+
+
+export const getPendingTimeSheets = async (req, res) => {
+    try {
+        const { projectName } = req.body;
+
+        if (!projectName) {
+            return res.status(400).json({ error: "Project name is required" });
+        }
+
+        const timesheets = await TimeSheetModel.find({
+            "timeSheet.projectsHours": { 
+                $elemMatch: { projectName: projectName } 
+            }
+        }).populate("userId", "name email"); // Populate user details
+        
+
+        if (!timesheets.length) {
+            return res.status(404).json({ message: "No pending timesheets found for this project" });
+        }
+
+        // Filter only pending timesheets (assuming a `status: "pending"` exists in each entry)
+        const pendingTimeSheets = timesheets.map((timesheet) => ({
+            userName: timesheet.userId.name,
+            email: timesheet.userId.email,
+            timeSheet: timesheet.timeSheet.filter(ts =>
+                ts.projectsHours.some(ph => ph.projectName === projectName)
+            ),
+        }));
+
+        res.status(200).json({ pendingTimeSheets });
+
+    } catch (error) {
+        console.error("Error fetching pending timesheets:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+};
+
+// fetching all the timesheets on project input
+
+export const getTimesheetsByProject = async (req, res) => {
+    try {
+        const { projectName } = req.body; // Extract project name from request body
+
+        if (!projectName) {
+            return res.status(400).json({ message: "Project name is required." });
+        }
+
+        // Find timesheets where the project exists
+        const timesheets = await TimeSheetModel.find({
+            "timeSheet.projectsHours.projectName": projectName
+        }).populate("userId", "name email"); // Populate user details (name, email)
+
+        if (!timesheets.length) {
+            return res.status(404).json({ message: "No timesheets found for this project." });
+        }
+
+        // ✅ Filter timesheet to include only relevant project entries
+        const response = timesheets.map(timesheet => {
+            return {
+                user: {
+                    id: timesheet.userId._id,
+                    name: timesheet.userId.name,
+                    email: timesheet.userId.email
+                },
+                timeSheet: timesheet.timeSheet
+                    .map(entry => ({
+                        date: entry.date,
+                        projectsHours: entry.projectsHours.filter(project => project.projectName === projectName)
+                    }))
+                    .filter(entry => entry.projectsHours.length > 0) // Remove empty entries
+            };
+        });
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error("Error fetching timesheets:", error);
+        res.status(500).json({ message: "Internal server error." });
+    }
+};

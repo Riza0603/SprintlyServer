@@ -1,5 +1,6 @@
 import express from "express";
-import { createProject,fetchProjectData, fetchProjects,getProjectFiles,updateGlobalSettings, updateProjectDeletedFile, updateProject,updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName, fetchDetails, fetchProjectsById, getProjectByManager } from "../controllers/projectController.js";
+import { createProject,fetchProjectData, fetchProjects,getProjectFiles,updateGlobalSettings, updateProjectDeletedFile, updateProject, updateProjects,updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName,deleteProject, fetchDetails, fetchProjectsById, getProjectByManager } from "../controllers/projectController.js";
+//import { createProject, fetchProjects,updateGlobalSettings,  updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName, fetchDetails, fetchProjectsById,updateProject,deleteProject } from "../controllers/projectController.js";
 
 const router = express.Router();
 
@@ -11,13 +12,15 @@ router.post("/getMembers/:projectName",getMembers);
 router.post("/addMember",addMember);
 router.post("/updateProject/:projectId",updateProject);
 router.post("/updateProjectDeletedFile/:projectId", updateProjectDeletedFile);
-router.get("/fetchProjectData/:projectId", fetchProjectData);
+router.post("/fetchProjectData/:projectId", fetchProjectData);
 router.delete("/deleteMember/:memberId",deleteMember);
 router.delete("/deleteUser/:memberId",deleteUser);
 router.post("/updateGlobalSettings", updateGlobalSettings);
 router.post("/updateProjectSettings/:projectId", updateProjectSettings);
 router.get("/project-details",fetchDetails);
 router.post("/getProjectFiles/:projectId",getProjectFiles);router.get("/getProjectByCreator/:projectCreatedById",getProjectByManager);
+router.put("/updateProjects/:projectId",updateProjects);
+router.delete("/deleteProject/:projectId",deleteProject);
 
 
 router.post("/getProjectFiles/:projectId",getProjectFiles);
