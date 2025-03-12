@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import TaskModel from "../models/Tasks.js";
 import PendingUser from "../models/PendingUser.js";
 import { sendEmail } from "../services/emailService.js";
+const mongoose = import('mongoose');
 
 //errorHandler
 const handleErrors = (err, res) => {
@@ -237,15 +238,17 @@ export const getUser = async (req, res) => {
 };
 
 
-//get the list of all users
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("name email experience role reportTo "); // Fetch all users
+    const users = await User.find().select("name email experience role reportTo projects");
+    console.log("Fetched users:", users); // Log the fetched users
     res.json({ success: true, users });
   } catch (error) {
+    console.error("Error fetching users:", error); // Log the error
     handleErrors(error, res);
   }
 };
+
 
 //update the user details
 export const updateUser = async (req, res) => {
