@@ -9,6 +9,8 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import umairRoutes from "./routes/umairRoutes.js";
 import tempTimeRoutes from "./routes/tempTimeRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js"
+import requestRoutes from "./routes/requestRoutes.js"; 
 
 const app = express();  // Initialize app before using it
 
@@ -27,4 +29,8 @@ app.use("/api",umairRoutes);
 
 app.use("/api",tempTimeRoutes)
 app.use("/api",notificationRoutes)
+app.use("/admin",adminRoutes);
+app.use("/request",requestRoutes);
+
 app.listen(5000, () => console.log("Server has started"));
+ 
