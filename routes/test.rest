@@ -22,28 +22,38 @@
 //timesheet fetching by project name
 # 
 
-PUT http://localhost:5000/api/updateProjects/67b2e4b028d7cc5f13799b03
+# PUT http://localhost:5000/api/updateProjects/67b2e4b028d7cc5f13799b03
+# Content-Type: application/json
+
+# {
+#   "members": {
+#     "67a6ea1aa5016c52f38f0cd0": {
+#       "position": "Manager"
+#     },
+#     "67a6ec74a5016c52f38f0ce5": {
+#       "position": "Manager"
+#     },
+#     "67a6e97ba5016c52f38f0cc0": {
+#       "position": "Manager"
+#     },
+#     "67a6e9b0a5016c52f38f0cc8": {
+#       "position": "Manager"
+#     },
+#     "67b2dc456a26cfd049295d29": {
+#       "position": "Manager"
+#     },
+#     "67a6ed28a5016c52f38f0cf2": {
+#       "position": "Manager"
+#     }
+#   }
+# }
+
+### Create a new request
+POST http://localhost:5000/request/create_project_deletion_request
 Content-Type: application/json
 
 {
-  "members": {
-    "67a6ea1aa5016c52f38f0cd0": {
-      "position": "Manager"
-    },
-    "67a6ec74a5016c52f38f0ce5": {
-      "position": "Manager"
-    },
-    "67a6e97ba5016c52f38f0cc0": {
-      "position": "Manager"
-    },
-    "67a6e9b0a5016c52f38f0cc8": {
-      "position": "Manager"
-    },
-    "67b2dc456a26cfd049295d29": {
-      "position": "Manager"
-    },
-    "67a6ed28a5016c52f38f0cf2": {
-      "position": "Manager"
-    }
-  }
+    "userID": "67a6ea1aa5016c52f38f0cd0",
+    "projectID":"67b2e50028d7cc5f1379b6e5",
+    "reason":"This project is no longer needed"   
 }
