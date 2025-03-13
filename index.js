@@ -23,9 +23,9 @@ connectDB();
 app.use("/auth", authRoutes);
 app.use("/api", projectRoute);
 app.use("/api", taskRoutes);
-//app.use("/api",authRoutes);
+app.use("/api",authRoutes);
 app.use("/api", uploadRoutes);
-app.use("/api",umairRoutes);
+app.use("/umair",umairRoutes);
 
 app.use("/api",tempTimeRoutes)
 app.use("/api",notificationRoutes)
