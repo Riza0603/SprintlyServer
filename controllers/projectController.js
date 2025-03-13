@@ -89,7 +89,6 @@ export const createProject = async (req, res) => {
 };
 
 
-
 //fetches projects by
 export const fetchProjects = async (req, res) => {
   try {
