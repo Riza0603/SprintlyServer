@@ -508,6 +508,18 @@ export const updateProjects = async (req, res) => {
       return res.status(400).json({ message: "No update data provided" });
     }
 
+    // *Check if a project with the same name already exists (excluding the current project)*
+    if (updateData.pname) {
+      const existingProject = await ProjectModel.findOne({ 
+        pname: updateData.pname, 
+        _id: { $ne: projectId } // Excluding current project from the check
+      });
+
+      if (existingProject) {
+        return res.status(400).json({ message: "Project with this name already exists. Please choose a different name." });
+      }
+    }
+
      // member update logic for Map type Project.js
      if (updateData.members) {
       const formattedMembers = {};
