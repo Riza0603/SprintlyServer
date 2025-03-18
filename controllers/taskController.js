@@ -233,8 +233,6 @@ export const addsubTask = async (req, res) => {
   try {
     const { taskId } = req.params;
     const { title,startDate,endDate } = req.body;
-
-
     const newSubTask = {
       _id: new mongoose.Types.ObjectId(),
       title,
@@ -300,7 +298,7 @@ export const updateSubTask = async (req, res) => {
 
     const updateTask = await TaskModel.findOneAndUpdate(
       { _id: taskId, "subTasks._id": subTaskId },
-      { $set: { "subTasks.$.title": title,"subTasks.$.startDate":startDate,"subTasks.$.endDate":endDate } },
+      { $set: {"subTasks.$.title": title,"subTasks.$.startDate":startDate,"subTasks.$.endDate":endDate } },
       { new: true },
 
     )
@@ -416,13 +414,14 @@ export const updateSubTaskStatus = async (req, res) => {
     }
 
     const totalSubTasks = updatedTask.subTasks.length;
+    const inProgressLength= updatedTask.subTasks.filter(subtask => subtask.status === "In-Progress").length;
     const completedSubTasksLength = updatedTask.subTasks.filter(subtask => subtask.status === "Completed").length;
 
 
     if (totalSubTasks === completedSubTasksLength) {
       updatedTask.status = "Completed";
       updatedTask.completedOn = new Date();
-    } else if (completedSubTasksLength > 0) {
+    } else if (completedSubTasksLength > 0 || inProgressLength > 0) {
       updatedTask.status = "In-Progress";
     } else {
       updatedTask.status = "No Progress";
@@ -460,6 +459,19 @@ export const fetchTask = async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 };
+
+
+export const updateTaskDates= async (req,res)=>{
+  try{
+    const {id}=req.params;
+    const {startDate, endDate}=req.body;
+    const updateTask= await TaskModel.findByIdAndUpdate(id,{startDate,endDate},{new:true});
+    res.status(200).json(updateTask);
+
+  }catch (error){
+    res.status(500).json({message:"Server error in updateTask()",error:error.message})
+  }
+}
 
 
 
