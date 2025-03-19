@@ -1,9 +1,13 @@
 import User from "../models/User.js";
 
 export const addUser = async (req, res) => {
-  console.log("Data received from client:", req.body);
   try {
-    const { name, email, phone, role, reportTo, experience } = req.body;
+    const { name, email, phone, role, reportTo, experience, projects, password } = req.body;
+
+    // Ensure all required fields are present
+    if (!name || !email || !phone || !role || !reportTo || !experience || !password) {
+      return res.status(400).json({ success: false, message: "Missing required fields" });
+    }
 
     const newUser = new User({
       name,
@@ -12,6 +16,8 @@ export const addUser = async (req, res) => {
       role,
       reportTo,
       experience,
+      projects,
+      password,
       isVerified: true,
     });
 
@@ -26,6 +32,7 @@ export const addUser = async (req, res) => {
     }
   }
 };
+
 
 
 
