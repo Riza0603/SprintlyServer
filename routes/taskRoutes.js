@@ -1,5 +1,5 @@
 import express from "express";
-import { addComment, addsubTask, addTask, deleteComment, deleteSubTask, fetchTask, getComments, getSubTasks, getTasks, importTasks, updateStatus, updateSubTask, updateSubTaskStatus, updateTask } from "../controllers/taskController.js";
+import { addComment, addsubTask, addTask, deleteComment, deleteSubTask, fetchTask, getComments, getSubTasks, getTasks, importTasks, updateStatus, updateSubTask, updateSubTaskStatus, updateTask, updateTaskDates } from "../controllers/taskController.js";
 
 const router = express.Router();
 
@@ -17,5 +17,6 @@ router.delete("/deleteSubTask/:taskId/:subTaskId",deleteSubTask);
 router.post("/editSubtask/:taskId/:subTaskId",updateSubTask);
 router.post("/updateSubTaskStatus/:subTaskId",updateSubTaskStatus);
 router.post("/importTasks",importTasks);
+router.post("/updateDates/:id",updateTaskDates)
 router.get("/tasks/:projectName", fetchTask); // Fetch Tasks by Project Name
 export default router;

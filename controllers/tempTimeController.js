@@ -6,7 +6,7 @@ import UserModel from "../models/User.js";
 export const startTimer = async (req, res) => {
     try {
         const { userId, startTime, elapsedTime, breakTime } = req.body;
-    
+        
         const tempTimeData = {
         userId: req.body.userId,
         startTime: req.body.startTime,
@@ -118,7 +118,7 @@ export const stopTimer = async (req, res) => {
         
                     // Update project time if project exists
                     const updatedProjectsHours = entry.projectsHours.map(project => {
-                        if (project.projectName === tempTime.projectName) {
+                        if (project.projectName === tempTime.projectName  && project.status === "Pending") {
                             projectFound = true;
                             return { ...project, time: project.time + req.body.elapsedTime };
                         }
@@ -221,8 +221,7 @@ export const getAllUserTimesheet = async (req, res) => {
         res.status(500).json({ message: err.message });
       }
   };
-  
-
+ 
   export const updateTimeSheetStatus = async (req, res) => {
     try {
         const { userId, projectHoursId, status, comments } = req.body;
@@ -243,17 +242,14 @@ export const getAllUserTimesheet = async (req, res) => {
                 ]
             }
         );
-
         if (!updatedEntry) {
             return res.status(404).json({ message: "Project entry not found" });
         }
-
         res.status(200).json(updatedEntry);
     } catch (err) {
         console.error("Error updating timesheet:", err);
         res.status(500).json({ message: "Internal Server Error", error: err.message });
     }
-   
   };
   
 

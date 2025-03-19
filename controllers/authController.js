@@ -327,7 +327,7 @@ export const getUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (err) {
     console.error("Error in getUsers:", err.message);
-    handleErrors(error, res);
+    handleErrors(err, res);
   }
 };
 
