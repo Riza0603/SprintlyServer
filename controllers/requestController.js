@@ -1,7 +1,10 @@
-import RequestModel from "../models/Requests.js"; // Correct import
+import RequestModel  from "../models/Requests.js";
 import UserModel from "../models/User.js";
-import ProjectModel from "../models/Projects.js"; // Not being used here, but included for consistency
-
+import ProjectModel from "../models/Projects.js";
+import Notification from "../models/Notification.js";
+import TaskModel from "../models/Tasks.js";
+import TempTimeModel from "../models/TempTime.js";
+import TimeSheetModel from "../models/TimeSheets.js";
 // Approve admin access
 
 export const getAllUsers = async (req, res) => { 
@@ -12,6 +15,78 @@ export const getAllUsers = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: "Error fetching users", error: error.message });
   }
+};
+
+
+// User Deletion Handler
+
+export const deleteUserRequestHandler = async (req, res) => {
+    try {
+        const { requestID, decision, adminID } = req.body;
+
+        if (!requestID || !adminID || !['APPROVED', 'REJECTED'].includes(decision)) {
+            return res.status(400).json({ success: false, message: "Invalid input." });
+        }
+
+        // Fetch the request
+        const request = await RequestModel.findById(requestID);
+        if (!request) {
+            return res.status(404).json({ success: false, message: "Request not found." });
+        }
+
+        // Ensure it is a USER_DELETION request
+        if (request.reqType !== "USER_DELETION") {
+            return res.status(400).json({ success: false, message: "Invalid request type." });
+        }
+
+        // Check if the requester is an admin
+        const adminUser = await UserModel.findById(adminID);
+        if (!adminUser || !adminUser.adminAccess) {
+            return res.status(403).json({ success: false, message: "Only admins can approve user deletion." });
+        }
+
+        // If request is denied, remove it and return
+        if (decision === "REJECTED") {
+            await RequestModel.findByIdAndDelete(requestID);
+            return res.status(200).json({ success: true, message: "User deletion request rejected and removed." });
+        }
+
+        // Proceed with user deletion
+        const userID = request.targetUserID;
+        const userExists = await UserModel.findById(userID);
+        if (!userExists) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        // Remove references from other collections
+        await Promise.all([
+            Notification.deleteMany({ user_id: userID }),
+            ProjectModel.updateMany({}, { $unset: { [`members.${userID}`]: 1 } }),
+            ProjectModel.updateMany(
+                { projectCreatedBy: userID },
+                { $set: { projectCreatedBy: null } }
+            ),
+            RequestModel.deleteMany({ userID }),
+            TaskModel.updateMany({ assigneeId: userID }, { $set: { assignee: "NA", assigneeId: null } }),
+            TaskModel.updateMany({ createdById: userID }, { $set: { createdBy: "NA", createdById: null } }),
+            TaskModel.updateMany(
+                {},
+                { $pull: { comments: { userId: userID } } }
+            ),
+            TempTimeModel.deleteMany({ userId: userID }),
+            TimeSheetModel.deleteMany({ userId: userID })
+        ]);
+
+        // Delete user from UserModel
+        await UserModel.findByIdAndDelete(userID);
+
+        // Remove the request itself
+        await RequestModel.findByIdAndDelete(requestID);
+
+        return res.status(200).json({ success: true, message: "User deleted successfully and references removed." });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 
@@ -69,68 +144,6 @@ export const adminAccessHandler = async (req, res) => {
     }
 };
 
-// export const approveAdminAccess = async (req, res) => {
-//     console.log("entered confirm api");
-//   const { requestId } = req.body;
-
-//   try {
-//     const request = await RequestModel.findById(requestId); // Use RequestModel here
-//     if (!request) {
-//       return res.status(404).json({ message: 'Request not found' });
-//     }
-
-//     // Assuming the request is related to a user
-//     const user = await UserModel.findById(request.userDetails._id);
-//     if (!user) {
-//       return res.status(404).json({ message: 'User not found' });
-//     }
-
-//     user.adminAccess = true; // Grant admin access
-//     await user.save();
-
-//     // Optionally, you can mark the request as approved
-//     request.status = 'Approved';
-//     await request.save();
-
-//     res.status(200).json({ message: 'Admin access granted successfully' });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: 'Error approving admin access' });
-//   }
-// };
-
-// // Reject a request
-// export const rejectRequest = async (req, res) => {
-//   const { requestId } = req.params;
-
-//   try {
-//     const request = await RequestModel.findById(requestId); // Use RequestModel here
-//     if (!request) {
-//       return res.status(404).json({ message: 'Request not found' });
-//     }
-
-//     // Delete the request
-//     await request.remove();
-
-//     res.status(200).json({ message: 'Request rejected successfully' });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: 'Error rejecting the request' });
-//   }
-// };
-
-
-
-
-// Fetching all the requests
-// export const getAllRequests = async(req, res)=>{
-//     try {
-//         const requests = await RequestModel.find();
-//         res.status(200).json({ success: true, data: requests });  
-//     } catch (error) {
-//         res.status(500).json({ success: false, message: "Error fetching projects", error: error.message });
-//     }
-// };
 
 //new api created for the fetching necessary data
 export const getAllRequests = async (req, res) => {
