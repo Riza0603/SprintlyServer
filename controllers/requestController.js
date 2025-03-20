@@ -1,17 +1,153 @@
-import RequestModel  from "../models/Requests.js";
+import RequestModel from "../models/Requests.js"; // Correct import
 import UserModel from "../models/User.js";
-import ProjectModel from "../models/Projects.js";
+import ProjectModel from "../models/Projects.js"; // Not being used here, but included for consistency
 
-// Fetching all the requests
+// Approve admin access
 
-export const getAllRequests = async(req, res)=>{
+export const getAllUsers = async (req, res) => { 
+  try {
+    const users = await UserModel.find({}, "-password -__v"); // Exclude passwords for security
+    const userCount = users.length;
+    res.status(200).json({ success: true, users, userCount });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error fetching users", error: error.message });
+  }
+};
+
+
+// Admin Access Handler
+
+export const adminAccessHandler = async (req, res) => {
     try {
-        const requests = await RequestModel.find();
-        res.status(200).json({ success: true, data: requests });  
+        const { requestID, decision, adminID } = req.body;
+
+        if (!requestID || !adminID || !['APPROVED', 'REJECTED'].includes(decision)) {
+            return res.status(400).json({ success: false, message: "Invalid input." });
+        }
+
+        // Check if the approving user is an admin
+        const adminUser = await UserModel.findById(adminID);
+        if (!adminUser || !adminUser.adminAccess) {
+            return res.status(403).json({ success: false, message: "Unauthorized: Only admins can approve/reject requests." });
+        }
+
+        // Fetch the request
+        const request = await RequestModel.findById(requestID);
+        if (!request) {
+            return res.status(404).json({ success: false, message: "Request not found." });
+        }
+
+        // Ensure it is an ADMIN_ACCESS request
+        if (request.reqType !== "ADMIN_ACCESS") {
+            return res.status(400).json({ success: false, message: "Invalid request type." });
+        }
+
+        const { userID } = request; // Extract userID from the request document
+
+        if (decision === 'APPROVED') {
+            // Update user collection to grant admin access
+            const user = await UserModel.findByIdAndUpdate(
+                userID,
+                { adminAccess: true },
+                { new: true }
+            );
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: "User not found." });
+            }
+        }
+        
+        // Remove the request from the Request collection
+        await RequestModel.findByIdAndDelete(requestID);
+
+        return res.status(200).json({
+            success: true,
+            message: `Admin access request has been ${decision.toLowerCase()}.`,
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Error fetching projects", error: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+// export const approveAdminAccess = async (req, res) => {
+//     console.log("entered confirm api");
+//   const { requestId } = req.body;
+
+//   try {
+//     const request = await RequestModel.findById(requestId); // Use RequestModel here
+//     if (!request) {
+//       return res.status(404).json({ message: 'Request not found' });
+//     }
+
+//     // Assuming the request is related to a user
+//     const user = await UserModel.findById(request.userDetails._id);
+//     if (!user) {
+//       return res.status(404).json({ message: 'User not found' });
+//     }
+
+//     user.adminAccess = true; // Grant admin access
+//     await user.save();
+
+//     // Optionally, you can mark the request as approved
+//     request.status = 'Approved';
+//     await request.save();
+
+//     res.status(200).json({ message: 'Admin access granted successfully' });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Error approving admin access' });
+//   }
+// };
+
+// // Reject a request
+// export const rejectRequest = async (req, res) => {
+//   const { requestId } = req.params;
+
+//   try {
+//     const request = await RequestModel.findById(requestId); // Use RequestModel here
+//     if (!request) {
+//       return res.status(404).json({ message: 'Request not found' });
+//     }
+
+//     // Delete the request
+//     await request.remove();
+
+//     res.status(200).json({ message: 'Request rejected successfully' });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'Error rejecting the request' });
+//   }
+// };
+
+
+
+
+// Fetching all the requests
+// export const getAllRequests = async(req, res)=>{
+//     try {
+//         const requests = await RequestModel.find();
+//         res.status(200).json({ success: true, data: requests });  
+//     } catch (error) {
+//         res.status(500).json({ success: false, message: "Error fetching projects", error: error.message });
+//     }
+// };
+
+//new api created for the fetching necessary data
+export const getAllRequests = async (req, res) => {
+    try {
+        const requests = await RequestModel.find()
+            .populate("projectName")  // Fetch project name from virtuals
+            .populate("userDetails")  // Fetch user name & role from virtuals
+            .populate("targetUserID")
+            .lean();  // Convert Mongoose documents to plain objects (faster response)
+
+        res.status(200).json({ success: true, data: requests });  
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Error fetching requests", error: error.message });
+    }
+};
+
+
 
 // creating an admin access request
 

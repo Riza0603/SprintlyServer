@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
-import UserModel from "../models/User.js";
+
 import dotenv from "dotenv";
 import TaskModel from "../models/Tasks.js";
 import ProjectModel from "../models/Projects.js";
+import UserModel from "../models/User.js";  // Adjust the path as needed
 
 dotenv.config();
 
-
-/*Fetch all users - not needed already there in authController.js
+//Fetch all users - not needed already there in authController.js
 export const getAllUsers = async (req, res) => { 
   try {
     const users = await UserModel.find({}, "-password"); // Exclude passwords for security
@@ -15,17 +15,9 @@ export const getAllUsers = async (req, res) => {
   } catch (error) {
     res.status(500).json({ success: false, message: "Error fetching users", error: error.message });
   }
-};*/
-// Fetch all users
-export const getAllUsers = async (req, res) => { 
-  try {
-    const users = await UserModel.find({}, "-password -__v"); // Exclude passwords for security
-    const userCount = users.length;
-    res.status(200).json({ success: true, users, userCount });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching users", error: error.message });
-  }
 };
+// Fetch all users
+
 
 
 // Fetching all Projects
