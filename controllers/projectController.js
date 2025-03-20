@@ -1,7 +1,8 @@
 import ProjectModel from "../models/Projects.js";
 import TaskModel from "../models/Tasks.js";
 import UserModel from "../models/User.js";
-import NotificationModel from "../models/Notification.js";
+import TimeSheetModel from "../models/TimeSheets.js";
+import TempTimeModel from "../models/TempTime.js";
 import { createNotification } from "./notificationController.js";
 import mongoose from "mongoose";
 import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/emailService.js";;
@@ -505,7 +506,7 @@ export const fetchWorkLoad = async (req, res) => {
 
 
 
-//get projrct name by creator id
+//get project name by creator id
 export const getProjectByManager=async(req,res)=>{
   try{
     const {projectCreatedById}=req.params;
@@ -520,4 +521,153 @@ catch (err) {
   console.error("Error:", err);
   res.status(500).json({ error: err.message });
 }
+};
+
+//Schedules variance
+export const scheduleVariance = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+    const tasks = await TaskModel.find({ projectName });
+
+    if (tasks.length === 0) {
+      return res.status(404).json({ message: "No tasks found for this project" });
+    }
+
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(task => task.status === "Completed").length;
+
+    const startDates = tasks.map(task => task.startDate).filter(date => date);
+    const endDates = tasks.map(task => task.endDate).filter(date => date);
+
+    if (startDates.length === 0 || endDates.length === 0) {
+      return res.status(400).json({ message: "Start and End dates required for Schedule Variance calculation" });
+    }
+
+    const projectStartDate = new Date(Math.min(...startDates.map(date => new Date(date).getTime())));
+    const projectEndDate = new Date(Math.max(...endDates.map(date => new Date(date).getTime())));
+
+    let totalProjectDuration = (projectEndDate - projectStartDate) / (1000 * 60 * 60 * 24);
+    totalProjectDuration = totalProjectDuration < 1 ? 1 : totalProjectDuration; // Ensure at least 1 day
+
+    let daysPassed = (new Date() - projectStartDate) / (1000 * 60 * 60 * 24);
+    daysPassed = Math.max(daysPassed, 1); // Ensure daysPassed is at least 0
+
+
+    const plannedCompletion = Math.min((daysPassed / totalProjectDuration) * 100, 100);
+    const actualCompletion = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+    const scheduleVariance = actualCompletion - plannedCompletion;
+
+    res.json({ projectName, totalTasks, completedTasks, plannedCompletion, actualCompletion, scheduleVariance });
+
+  } catch (error) {
+    console.error("Error calculating Schedule Variance:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+//Project Effort Distribution
+export const effortDistribution = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+
+    const timesheets = await TimeSheetModel.find({
+      "timeSheet.projectsHours.projectName": projectName,
+    });
+
+    if (timesheets.length === 0) {
+      return res.status(404).json({ message: "No time logs found for this project" });
+    }
+
+    let userTotalHours = {}; 
+    let userProjectHours = {}; 
+
+    for (const timesheet of timesheets) {
+      for (const entry of timesheet.timeSheet) {
+        for (const project of entry.projectsHours) {
+          if (project.status === "Approved") {  // Extract time only if status is Approved
+            const timeInHours = project.time / (1000 * 60 * 60); 
+            const userId = timesheet.userId.toString();
+
+            if (!userTotalHours[userId]) {
+              userTotalHours[userId] = 0;
+            }
+            userTotalHours[userId] += timeInHours;
+
+            if (project.projectName === projectName) {
+              if (!userProjectHours[userId]) {
+                userProjectHours[userId] = 0;
+              }
+              userProjectHours[userId] += timeInHours;
+            }
+          }
+        }
+      }
+    }
+
+    const userIds = Object.keys(userProjectHours);
+    const users = await UserModel.find({ _id: { $in: userIds } }, "name");
+
+    const effortDistribution = users.map((user) => {
+      const projectHours = userProjectHours[user._id] || 0;
+      const totalHours = userTotalHours[user._id] || 0;
+      const effortPercentage = totalHours > 0 ? (projectHours / totalHours) * 100 : 0;
+
+      return {
+        member: user.name,
+        hours: projectHours.toFixed(2),
+        effortPercentage: effortPercentage.toFixed(2),
+      };
+    });
+
+    res.json({ projectName, effortDistribution });
+  } catch (error) {
+    console.error("Error fetching project effort distribution:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+//Project engagement rate
+export const projectEngagementRate = async (req, res) => {
+  try {
+    const { projectName } = req.params;
+
+    const project = await ProjectModel.findOne({ pname: projectName });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    const totalMembers = project.members instanceof Map 
+    ? project.members.size 
+    : Object.keys(project.members || {}).filter(key => !key.startsWith("$")).length;
+
+    if (totalMembers === 0) {
+      return res.status(200).json({ projectName, engagementRate: 0, totalMembers, activeUsers: 0, activeUserNames: [] });
+    }
+
+    // Fetch active users
+    const activeUsers = await TempTimeModel.find({
+      projectName,
+      started: true,
+      paused: false,
+    }).select("userId");
+
+    const activeUserIds = activeUsers.map((user) => user.userId);
+
+    // Fetch active user names
+    const activeUserNames = await UserModel.find({ _id: { $in: activeUserIds } },"name");
+
+    const engagementRate = (activeUsers.length / totalMembers) * 100;
+
+    res.json({
+      projectName,
+      engagementRate: engagementRate.toFixed(2),
+      totalMembers,
+      activeUsers: activeUsers.length,
+      activeUserNames: activeUserNames.map((user) => user.name),
+    });
+  } catch (error) {
+    console.error("Error fetching project engagement rate:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 };
