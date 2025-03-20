@@ -103,7 +103,7 @@ export const fetchProjects = async (req, res) => {
 //fetch project by name
 export const getProjectByName=async(req,res)=>{
   try{
-    
+   
     const {projectTitle}=req.params;
     const project= await ProjectModel.findOne({pname:projectTitle});
     res.status(200).json(project)
@@ -201,7 +201,7 @@ export const updateProject = async (req, res) => {
       { new: true }  // `new: true` returns the updated document
     );
 
-    
+   
 
     res.status(200).json({ message: "Project updated successfully", updatedProject });
   } catch (error) {
@@ -218,7 +218,7 @@ export const updateGlobalSettings = async (req, res) => {
 
   try {
     await ProjectModel.updateMany(
-      { [`members.${req.body.userId}`]: { $exists: true } }, 
+      { [`members.${req.body.userId}`]: { $exists: true } },
       {
         $set: {
           [`members.${req.body.userId}.notifyinApp`]: notifyInApp,
@@ -249,7 +249,7 @@ export const updateProjectSettings = async (req, res) => {
 
   try {
     const updatedProject = await ProjectModel.findOneAndUpdate(
-      { _id: projectId, [`members.${userId}`]: { $exists: true } }, 
+      { _id: projectId, [`members.${userId}`]: { $exists: true } },
       {
         $set: {
           [`members.${userId}.notifyinApp`]: notifyInApp,
@@ -384,10 +384,10 @@ export const addMember = async (req, res) => {
 export const deleteUser= async (req,res)=>{
   try{
     const memberId=req.params.memberId;
-    
+   
     const updateProject = await ProjectModel.updateMany(
-      { [`members.${memberId}`]: { $exists: true } }, 
-      { $unset: { [`members.${memberId}`]: "" } } 
+      { [`members.${memberId}`]: { $exists: true } },
+      { $unset: { [`members.${memberId}`]: "" } }
     );
 
     const updateUser = await UserModel.findByIdAndDelete(memberId);
@@ -444,8 +444,8 @@ export const fetchDetails = async (req, res) => {
       });
     }
 
-    const totalTasks = tasks.length; 
-    let totalWeightSum = 0; 
+    const totalTasks = tasks.length;
+    let totalWeightSum = 0;
 
     const workloadData = users.map((user) => {
       const userTasks = tasks.filter((task) => task.assignee === user.name);
@@ -463,10 +463,10 @@ export const fetchDetails = async (req, res) => {
     const finalWorkloadData = workloadData.map((member) => {
       const workloadPercentage = totalWeightSum > 0 ? Math.round((member.weight / totalWeightSum) * 100) : 0;
 
-      return { 
-        id: member.id, 
-        name: member.name, 
-        workload: member.workloadScore, 
+      return {
+        id: member.id,
+        name: member.name,
+        workload: member.workloadScore,
         workloadPercentage: parseFloat(workloadPercentage)
       };
     });
@@ -557,7 +557,7 @@ export const deleteProject = async (req, res) => {
     const { projectId } = req.params;
 
     const deletedProject = await ProjectModel.findByIdAndDelete(projectId);
-    
+   
     if (!deletedProject) {
       return res.status(404).json({ message: "Project not found" });
     }
