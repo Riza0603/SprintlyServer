@@ -103,10 +103,7 @@ export const deleteFilesS3 = async (req, res) => {
     const { fileUrls } = req.body;
 
     if (Array.isArray(fileUrls)) {
-        // Safe to use .map() here
-        fileUrls.map((url) => {
-          // your logic here
-        });
+        console.log("Everything is okay")
       } else {
         console.error("fileUrls is not an array:", fileUrls);
       }
