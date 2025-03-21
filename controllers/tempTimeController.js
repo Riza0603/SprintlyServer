@@ -6,7 +6,7 @@ import UserModel from "../models/User.js";
 export const startTimer = async (req, res) => {
     try {
         const { userId, startTime, elapsedTime, breakTime } = req.body;
-    
+        
         const tempTimeData = {
         userId: req.body.userId,
         startTime: req.body.startTime,
@@ -117,7 +117,7 @@ export const stopTimer = async (req, res) => {
         
                     // Update project time if project exists
                     const updatedProjectsHours = entry.projectsHours.map(project => {
-                        if (project.projectName === tempTime.projectName) {
+                        if (project.projectName === tempTime.projectName  && project.status === "Pending") {
                             projectFound = true;
                             return { ...project, time: project.time + req.body.elapsedTime };
                         }
