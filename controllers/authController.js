@@ -165,7 +165,7 @@ export const forgotPassword = async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user) {
-    const token = jwt.sign({ id: user._id }, "jwt_secret_key", { expiresIn: "8h" });
+    const token = jwt.sign({ id: user._id },process.env.JWT_SECRET, { expiresIn: "8h" });
     const resetLink = `http://localhost:5173/reset-password/${user._id}/${token}`;
 
     // Send Reset Email using email service
