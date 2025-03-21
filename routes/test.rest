@@ -49,7 +49,7 @@
 # }
 
 ### Create a new request
-POST http://localhost:5000/request/create_project_deletion_request
+POST http://localhost:5000/request/createProjectDeletionRequest
 Content-Type: application/json
 
 {
