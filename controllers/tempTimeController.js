@@ -192,7 +192,6 @@ export const stopTimer = async (req, res) => {
 
 export const getAllUserTimesheet = async (req, res) => {
     try {
-        console.log("fetching the time sheet...");
         const entries = await TimeSheetModel.find();
         const result = [];
         for (const entry of entries) {
@@ -213,7 +212,6 @@ export const getAllUserTimesheet = async (req, res) => {
             }
             }
         }
-        console.log(result);
         res.status(200).json(result);
       } catch (err) {
         res.status(500).json({ message: err.message });
@@ -224,7 +222,6 @@ export const getAllUserTimesheet = async (req, res) => {
   export const updateTimeSheetStatus = async (req, res) => {
     try {
         const { userId, projectHoursId, status, comments } = req.body;
-        console.log(userId, projectHoursId, status, comments )
         // Find the specific user and update the project inside any timeSheet entry
         const updatedEntry = await TimeSheetModel.findOneAndUpdate(
             { userId, "timeSheet.projectsHours._id": projectHoursId },
