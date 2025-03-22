@@ -322,7 +322,7 @@ export const getMembers = async (req, res) => {
 };
 
 
-//remove member from project
+// Remove member from project
 export const deleteMember = async (req, res) => {
   try {
     const { memberId } = req.params;
@@ -348,19 +348,44 @@ export const deleteMember = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "Member not found in project" });
     }
-    await sendProjectRemovalEmail(user,projectName);
-    res.status(200).json({ message: "Member deleted successfully and email sent" });
+
+    // Send removal email
+    await sendProjectRemovalEmail(user, projectName);
+
+    const formatDate = (date) => date?.toISOString().split("T")[0];
+
+    // Create notification
+    await createNotification({
+      user_id: memberId,
+      type: "ProjectRemoval",
+      message: `You have been removed from the project: ${projectName}`,
+      entity_id: updateProject._id,
+      metadata: {
+        projectName,
+        removedBy: removedBy || "Someone",
+        startDate: formatDate(updateProject.pstart),
+        endDate: formatDate(updateProject.pend),
+        removalDate: formatDate(new Date()),
+      },
+    });
+
+    res
+      .status(200)
+      .json({ message: "Member deleted successfully, notification and email sent" });
   } catch (err) {
     console.error("Error deleting member:", err);
-    res.status(500).json({ message: "Error deleting member", error: err.message });
+    res
+      .status(500)
+      .json({ message: "Error deleting member", error: err.message });
   }
 };
+
 
 
 //add members to project
 export const addMember = async (req, res) => {
   try {
-    const { _id, projectName, position } = req.body;
+    const { _id, projectName, position, } = req.body;
 
     const project = await ProjectModel.findOneAndUpdate(
       { pname: projectName },
@@ -380,13 +405,37 @@ export const addMember = async (req, res) => {
       },
       { new: true }
     );
-
+    //const proj=await ProjectModel.find(projectName);
     await sendProjectAdditionEmail([member.email], projectName, project.pdescription, project.pstart, project.pend);
+
+    // Fetch the name of the project creator
+    const creator = await UserModel.findById(project.projectCreatedBy).select("name");
+    if (!creator) {
+      return res.status(404).json({ message: "Project creator not found" });
+    }
+    
+    // Create notification
+    await createNotification({
+      user_id: _id,
+      type: "Project",
+      message: `You have been added to the project: ${projectName}`,
+      entity_id: project._id,
+      metadata: {
+        projectName: projectName,
+        createdBy: creator.name || "Someone",
+        startDate: formatDate(project.pstart),
+        endDate: formatDate(project.pend),
+      },      
+    });
 
     res.status(200).json(member);
   } catch (err) {
     res.status(500).json({ message: "Error adding member", error: err.message });
   }
+};
+
+const formatDate = (date) => {
+  return date.toISOString().split("T")[0]; // returns 'YYYY-MM-DD'
 };
 
 
