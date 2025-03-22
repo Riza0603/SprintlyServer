@@ -5,7 +5,7 @@ const ProjectSchema = new mongoose.Schema({
   pdescription: String,
   pstart: Date,
   pend: Date,
-  projectCreatedBy: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
+  projectCreatedBy: { type: mongoose.Schema.Types.ObjectId},
   members: {
     type: Map, // Use a Map to store objectId as key and notify details as value
     of: new mongoose.Schema({

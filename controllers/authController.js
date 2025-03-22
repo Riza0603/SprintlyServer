@@ -42,11 +42,15 @@ export const login = async (req, res) => {
 
     // Generate JWT Token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "8h" });
+    
+    const secureUser = (({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess }) => 
+      ({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess }))(user.toObject());
+  
 
     res.json({
       success: true,
       message: "Login Successful!",
-      user:user,
+      user:secureUser,
       token,
     });
 
@@ -237,16 +241,6 @@ export const getUser = async (req, res) => {
 };
 
 
-//get the list of all users
-export const getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find().select("name email experience role reportTo "); // Fetch all users
-    res.json({ success: true, users });
-  } catch (error) {
-    handleErrors(error, res);
-  }
-};
-
 //update the user details
 export const updateUser = async (req, res) => {
   try {
@@ -305,23 +299,12 @@ export const verifyToken = async (req, res) => {
   }
 };
 
-// export const getUsers = async (req, res) => {
-//   try {
-//     console.log("Fetching all users...");  // Debugging
-//     const users = await User.find({}, "-password");  // Exclude passwords for security
-//     res.status(200).json(users);
-//   } catch (err) {
-//     console.error("Error in getUsers:", err.message);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// };
-
 
 
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find({}, "-password");
-    res.status(200).json(users);
+    res.status(200).json({ success: true, users });
   } catch (err) {
     console.error("Error in getUsers:", err.message);
     handleErrors(err, res);
@@ -338,5 +321,3 @@ export const fetchById = async (req, res) => {
     handleErrors(error, res);
   }
 };
-
-

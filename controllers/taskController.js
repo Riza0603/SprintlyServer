@@ -66,7 +66,7 @@ export const addTask = async (req, res) => {
 // Fetch Tasks API
 export const getTasks = async (req, res) => {
   try {
-    const tasks = await TaskModel.find(); // Fetch all tasks
+    const tasks = await TaskModel.find();
     res.status(200).json(tasks);
   } catch (err) {
     console.error("Error in getTasks:", err.message);
