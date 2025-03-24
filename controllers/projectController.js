@@ -746,6 +746,16 @@ export const updateProjects = async (req, res) => {
       updateData.members.forEach((memberId) => {
         formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true, position: "Employee" }; // Default values
       });
+
+      // Ensure updated project manager is assigned correct role
+      if (updateData.projectCreatedBy) {
+        formattedMembers[updateData.projectCreatedBy] = {
+          notifyinApp: true,
+          notifyinEmail: true,
+          position: "Project Manager"
+        };
+      }
+
       updateData.members = formattedMembers; // Replace the existing Map properly
     }
 
