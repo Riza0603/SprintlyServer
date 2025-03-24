@@ -715,8 +715,6 @@ export const projectEngagementRate = async (req, res) => {
   }
 };
 
-
-
 //Update Project admin
 export const updateProjects = async (req, res) => {
   try {
