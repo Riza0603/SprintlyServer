@@ -21,6 +21,8 @@ const TaskSchema = new mongoose.Schema({
       _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
       title: { type: String, required: true },
       status: { type: String, default: "No Progress" },
+      startDate: { type: Date, default: null },
+      endDate: { type: Date, default: null },
     },
   ],
   comments: [

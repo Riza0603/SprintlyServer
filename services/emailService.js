@@ -1,17 +1,22 @@
 import transporter from "../config/emailTransporter.js";
 
-
 //Project Addition Email
-export const sendProjectAdditionEmail = async (emails, pname, pdescription, pstart, pend) => {
-    if (!emails) return;
+export const sendProjectAdditionEmail = async (
+  emails,
+  pname,
+  pdescription,
+  pstart,
+  pend
+) => {
+  if (!emails) return;
 
-  const startDate = new Date(pstart).toDateString(); 
+  const startDate = new Date(pstart).toDateString();
   const endDate = new Date(pend).toDateString();
-    await transporter.sendMail({
-        from: "sprintlyganglia@gmail.com",
-        to: emails.join(","), 
-        subject: `You have been added to the project: ${pname}`,
-        html: `
+  await transporter.sendMail({
+    from: "sprintlyganglia@gmail.com",
+    to: emails.join(","),
+    subject: `You have been added to the project: ${pname}`,
+    html: `
           <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
             <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
                         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
@@ -45,18 +50,18 @@ export const sendProjectAdditionEmail = async (emails, pname, pdescription, psta
             </div>
           </div>
         `,
-      });
+  });
 };
 
 //Project Removal Email
 export const sendProjectRemovalEmail = async (user, projectName) => {
-    if (!user.email) return;
+  if (!user.email) return;
 
-    await transporter.sendMail({
-        from: "sprintlyganglia@gmail.com",
-        to: user.email,
-        subject: `You have been removed from the project: ${projectName}`,
-        html: `
+  await transporter.sendMail({
+    from: "sprintlyganglia@gmail.com",
+    to: user.email,
+    subject: `You have been removed from the project: ${projectName}`,
+    html: `
           <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
             <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
                         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
@@ -80,14 +85,23 @@ export const sendProjectRemovalEmail = async (user, projectName) => {
             </div>
           </div>
         `,
-      });  
+  });
 };
 
 //Task assignment email
-export const sendTaskAssignmentEmail = async (user, project, title, description, startDate, endDate, priority, createdBy) => {
-    if (!user.email) return;
+export const sendTaskAssignmentEmail = async (
+  user,
+  project,
+  title,
+  description,
+  startDate,
+  endDate,
+  priority,
+  createdBy
+) => {
+  if (!user.email) return;
 
-await transporter.sendMail({
+  await transporter.sendMail({
     from: "sprintlyganglia@gmail.com",
     to: user.email,
     subject: `New Task Assigned: ${title}`,
@@ -97,15 +111,21 @@ await transporter.sendMail({
                     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
           <h2 style="color: #2563eb;">New Task Assigned</h2>
           <p style="color: #555; font-size: 16px;">
-            Hello ${user.name}, a new task has been assigned to you in the project 
+            Hello ${
+              user.name
+            }, a new task has been assigned to you in the project 
             <strong style="color: #2563eb;">${project.pname}</strong>.
           </p>
 
           <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
             <p style="font-size: 16px;"><strong>📌 Task Title:</strong> ${title}</p>
             <p style="font-size: 16px;"><strong>📄 Description:</strong> ${description}</p>
-            <p style="font-size: 16px;"><strong>📅 Start Date:</strong> ${startDate || "Not Set"}</p>
-            <p style="font-size: 16px;"><strong>⏳ End Date:</strong> ${endDate || "Not Set"}</p>
+            <p style="font-size: 16px;"><strong>📅 Start Date:</strong> ${
+              startDate || "Not Set"
+            }</p>
+            <p style="font-size: 16px;"><strong>⏳ End Date:</strong> ${
+              endDate || "Not Set"
+            }</p>
             <p style="font-size: 16px;"><strong>🔹 Priority:</strong> ${priority}</p>
             <p style="font-size: 16px;"><strong>📌 Assigned By:</strong> ${createdBy}</p>
           </div>
@@ -126,10 +146,15 @@ await transporter.sendMail({
 };
 
 //Task Update Email
-export const sendTaskUpdateEmail = async (user, project, title, changesList) => {
-    if (!user.email) return;
+export const sendTaskUpdateEmail = async (
+  user,
+  project,
+  title,
+  changesList
+) => {
+  if (!user.email) return;
 
-await transporter.sendMail({
+  await transporter.sendMail({
     from: "sprintlyganglia@gmail.com",
     to: user.email,
     subject: `Task Updated: ${title}`,
@@ -139,8 +164,12 @@ await transporter.sendMail({
                     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
           <h2 style="color: #2563eb;">Task Updated</h2>
           <p style="color: #555; font-size: 16px;">
-            Hello ${user.name}, the task <strong style="color: #2563eb;">${title}</strong> in project 
-            <strong style="color: #2563eb;">${project.pname}</strong> has been updated.
+            Hello ${
+              user.name
+            }, the task <strong style="color: #2563eb;">${title}</strong> in project 
+            <strong style="color: #2563eb;">${
+              project.pname
+            }</strong> has been updated.
           </p>
 
           <div style="background-color: #f8f9fa; font-size: 16px; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
@@ -162,10 +191,10 @@ await transporter.sendMail({
   });
 };
 export const sendEmail = async (email, subject, content, type) => {
-    let emailHtml;
+  let emailHtml;
 
-    if (type === "verifyOTP" || type === "resendOTP") {
-        emailHtml = `
+  if (type === "verifyOTP" || type === "resendOTP") {
+    emailHtml = `
         <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
           <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
                       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: left;">
@@ -205,60 +234,62 @@ export const sendEmail = async (email, subject, content, type) => {
           </div>
         </div>
       `;
-    } else if (type === "resetPassword") {
-        emailHtml = `
-        <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 40px 0; text-align: center;">
-          <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
-                      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: left;">
-            
-            <div style="display: flex; align-items: center; margin-bottom: 20px;">
-              <img src="https://res.cloudinary.com/dkpvbsfee/image/upload/v1740632251/sprintlyLogo_wn57mg.png" 
-                   alt="Sprintly Logo" width="50" 
-                   style="margin-right: 10px;">
-              <h2 style="font-style: italic; color: #333; margin: 0; line-height: 50px;">Sprintly</h2>
-            </div>
+  } else if (type === "resetPassword") {
+    emailHtml = `
+      <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 40px 0; text-align: center;">
+      <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: left;">
 
-            <h2 style="color: #333; margin-bottom: 15px;">Reset Your Password</h2>
-            <p style="color: #555; font-size: 16px; margin-bottom: 20px;">
-              We received a request to reset your password. Click the button below to proceed:
-            </p>
+    <div style="display: flex; align-items: center; margin-bottom: 20px;">
+      <img src="https://res.cloudinary.com/dkpvbsfee/image/upload/v1740632251/sprintlyLogo_wn57mg.png" 
+           alt="Sprintly Logo" width="50" 
+           style="margin-right: 10px;">
+      <h2 style="font-style: italic; color: #333; margin: 0; line-height: 50px;">Sprintly</h2>
+    </div>
 
-            <a href="${content}"
-               style="display: inline-block; padding: 14px 28px; font-size: 16px; font-weight: bold; color: #fff; 
-                      background: #2563eb; border-radius: 6px; text-decoration: none;">
-              Reset Password
-            </a>
+    <h2 style="color: #333; margin-bottom: 15px; text-align: center;">Reset Your Password</h2>
+    <p style="color: #555; font-size: 16px; margin-bottom: 20px; text-align: center;">
+      We received a request to reset your password. Click the button below to proceed:
+    </p>
 
-            <p style="color: #555; font-size: 14px; margin-top: 20px;">
-              If you did not request a password reset, please ignore this email.
-            </p>
+    <div style="text-align: center;">
+      <a href="${content}"
+         style="display: block; padding: 14px 28px; font-size: 16px; font-weight: bold; color: #fff; 
+                background: #2563eb; border-radius: 6px; text-decoration: none; width: fit-content; margin: auto;">
+        Reset Password
+      </a>
+    </div>
 
-            <a href="mailto:sprintlyganglia@gmail.com" 
-               style="display: block; text-align: center; margin-top: 15px; color: #2563eb; font-size: 14px; text-decoration: none;">
-              Need help? Contact Support
-            </a>
+    <p style="color: #555; font-size: 14px; margin-top: 20px; text-align: center;">
+      If you did not request a password reset, please ignore this email.
+    </p>
 
-            <footer style="margin-top: 30px; font-size: 12px; color: #888; text-align: center;">
-              <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
-            </footer>
+    <a href="mailto:sprintlyganglia@gmail.com" 
+       style="display: block; text-align: center; margin-top: 15px; color: #2563eb; font-size: 14px; text-decoration: none;">
+      Need help? Contact Support
+    </a>
 
-          </div>
-        </div>
+    <footer style="margin-top: 30px; font-size: 12px; color: #888; text-align: center;">
+      <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+    </footer>
+
+  </div>
+</div>
       `;
-    }
+  }
 
-    const mailOptions = {
-        from: "Sprintly <your-email@example.com>",
-        to: email,
-        subject,
-        html: emailHtml,
-    };
+  const mailOptions = {
+    from: "Sprintly <your-email@example.com>",
+    to: email,
+    subject,
+    html: emailHtml,
+  };
 
-    try {
-        await transporter.sendMail(mailOptions);
-        return true;
-    } catch (error) {
-        console.error("Error sending email:", error);
-        return false;
-    }
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error("Error sending email:", error);
+    return false;
+  }
 };

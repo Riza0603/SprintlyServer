@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import TaskModel from "../models/Tasks.js";
 import PendingUser from "../models/PendingUser.js";
 import { sendEmail } from "../services/emailService.js";
+const mongoose = import('mongoose');
 
 //errorHandler
 const handleErrors = (err, res) => {
@@ -42,11 +43,15 @@ export const login = async (req, res) => {
 
     // Generate JWT Token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "8h" });
+    
+    const secureUser = (({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess }) => 
+      ({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess }))(user.toObject());
+  
 
     res.json({
       success: true,
       message: "Login Successful!",
-      user:user,
+      user:secureUser,
       token,
     });
 
@@ -164,7 +169,7 @@ export const forgotPassword = async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user) {
-    const token = jwt.sign({ id: user._id }, "jwt_secret_key", { expiresIn: "8h" });
+    const token = jwt.sign({ id: user._id },process.env.JWT_SECRET, { expiresIn: "8h" });
     const resetLink = `http://localhost:5173/reset-password/${user._id}/${token}`;
 
     // Send Reset Email using email service
@@ -237,15 +242,17 @@ export const getUser = async (req, res) => {
 };
 
 
-//get the list of all users
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("name email experience role reportTo "); // Fetch all users
+    const users = await User.find().select("name email experience role reportTo projects");
+    console.log("Fetched users:", users); // Log the fetched users
     res.json({ success: true, users });
   } catch (error) {
+    console.error("Error fetching users:", error); // Log the error
     handleErrors(error, res);
   }
 };
+
 
 //update the user details
 export const updateUser = async (req, res) => {
@@ -305,26 +312,15 @@ export const verifyToken = async (req, res) => {
   }
 };
 
-// export const getUsers = async (req, res) => {
-//   try {
-//     console.log("Fetching all users...");  // Debugging
-//     const users = await User.find({}, "-password");  // Exclude passwords for security
-//     res.status(200).json(users);
-//   } catch (err) {
-//     console.error("Error in getUsers:", err.message);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// };
-
 
 
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find({}, "-password");
-    res.status(200).json(users);
+    res.status(200).json({ success: true, users });
   } catch (err) {
     console.error("Error in getUsers:", err.message);
-    handleErrors(error, res);
+    handleErrors(err, res);
   }
 };
 
@@ -338,5 +334,3 @@ export const fetchById = async (req, res) => {
     handleErrors(error, res);
   }
 };
-
-
