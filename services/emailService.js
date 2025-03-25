@@ -293,3 +293,46 @@ export const sendEmail = async (email, subject, content, type) => {
     return false;
   }
 };
+
+//Timesheet Status Email
+export const sendStatusEmail = async (user, projectName, status, comments = "", projectDate) => {
+  if (!user.email) return;
+
+  const isRejected = status === "Rejected";
+  const subject = `Your timesheet entry for ${projectName} was ${isRejected ? "rejected" : "approved"}`;
+  const statusColor = isRejected ? "#d32f2f" : "#388e3c";
+  const statusText = isRejected ? "rejected" : "approved";
+  const commentsSection = isRejected
+      ? `<p style="font-size: 16px;"><strong>📝 Comments:</strong> ${comments}</p>`
+      : "";
+
+  await transporter.sendMail({
+      from: "sprintlyganglia@gmail.com",
+      to: user.email,
+      subject,
+      html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
+              <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
+                          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+                  <h2 style="color: ${statusColor};">Timesheet ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}</h2>
+                  <p style="color: #555; font-size: 16px;">
+                      Hello ${user.name}, your timesheet entry for 
+                      <strong style="color: #2563eb;">${projectName}</strong> was 
+                      <strong style="color: ${statusColor};">${statusText}</strong>.
+                  </p>
+                  <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; text-align: left;">
+                      <p style="font-size: 16px;"><strong>📌 Project Name:</strong> ${projectName}</p>
+                      <p style="font-size: 16px;"><strong>📅 Project Date:</strong> ${projectDate}</p>
+                      ${commentsSection}
+                  </div>
+                  <p style="color: #555; font-size: 14px;">
+                      ${isRejected ? "Please review the comments and update your timesheet accordingly." : "Thank you for submitting your timesheet."}
+                  </p>
+                  <footer style="margin-top: 20px; font-size: 12px; color: #888;">
+                      <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+                  </footer>
+              </div>
+          </div>
+      `,
+  });
+};
