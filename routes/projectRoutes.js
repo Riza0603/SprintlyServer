@@ -1,5 +1,5 @@
 import express from "express";
-import { createProject,fetchProjectData, fetchProjects,getProjectFiles,updateGlobalSettings, updateProjectDeletedFile, updateProject, updateProjects,updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName,deleteProject, fetchProjectsById, getProjectByManager, fetchWorkLoad, scheduleVariance, effortDistribution, projectEngagementRate } from "../controllers/projectController.js";
+import { createProject,fetchProjectData, fetchProjects,getProjectFiles,updateGlobalSettings, updateProjectDeletedFile, updateProject, updateProjects,updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName, fetchProjectsById, getProjectByManager, fetchWorkLoad, scheduleVariance, effortDistribution, projectEngagementRate } from "../controllers/projectController.js";
 //import { createProject, fetchProjects,updateGlobalSettings,  updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName, fetchDetails, fetchProjectsById,updateProject,deleteProject } from "../controllers/projectController.js";
 
 const router = express.Router();
@@ -25,7 +25,6 @@ router.get("/schedule-variance/:projectName",scheduleVariance);
 router.get("/effort-distribution/:projectName",effortDistribution);
 router.get("/engagementrate/:projectName",projectEngagementRate);
 router.put("/updateProjects/:projectId",updateProjects);
-router.delete("/deleteProject/:projectId",deleteProject);
 
 
 router.post("/getProjectFiles/:projectId",getProjectFiles);
