@@ -43,7 +43,6 @@ export const uploadFileToS3 = async (file) => {
 
 
 export const deleteFilesFromS3 = async (fileUrls) => {
-    console.log("deel", fileUrls);
     if (!fileUrls || fileUrls.length === 0) return;
     console.log("deel", fileUrls);
 

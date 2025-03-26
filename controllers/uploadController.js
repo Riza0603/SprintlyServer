@@ -116,6 +116,7 @@ export const deleteFilesS3 = async (req, res) => {
     }
 
     try {
+        
         await deleteFilesFromS3(fileUrls);
         res.status(200).json({ message: "Files deleted successfully" });
 

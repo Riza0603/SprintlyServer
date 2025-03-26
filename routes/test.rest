@@ -48,22 +48,22 @@
 #   }
 # }
 
-### Create a new request
-# POST http://localhost:5000/requests/create_project_deletion_request
-# Content-Type: application/json
-
-# {
-#     "userID": "67a6ec2ea5016c52f38f0cdd",
-#     "projectID":"67dd049a03beab6db5fb984c",
-#     "reason":"This project is no longer needed"   
-# }
-
-
-POST http://localhost:5000/requests/create_user_deletion_request
+## Create a new request
+POST http://localhost:5000/requests/create_project_deletion_request
 Content-Type: application/json
 
 {
     "userID": "67a6ec2ea5016c52f38f0cdd",
-    "targetUserID":"67dcefdc788e9672d0d971b5",
-    "reason":"This user is no longer needed in any projects"   
+    "projectID":"67e254a478d78bc9e9878837",
+    "reason":"This project is no longer needed"   
 }
+
+
+# POST http://localhost:5000/admin/create_user_deletion_request
+# Content-Type: application/json
+
+# {
+#     "userID": "67a6ec2ea5016c52f38f0cdd",
+#     "targetUserID":"67dcefdc788e9672d0d971b5",
+#     "reason":"This user is no longer needed in any projects"   
+# }
