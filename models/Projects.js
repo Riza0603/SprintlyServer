@@ -18,7 +18,11 @@ const ProjectSchema = new mongoose.Schema({
   pstatus: { type: String, default: "In-Progress" },
 
   pAttachments:[{ type: String }],
-});
+  pLinks: [{
+    link: { type: String },
+    lName: {type: String},
+    description: { type: String }
+  }],});
 
 const ProjectModel = mongoose.model("Projects", ProjectSchema);
 

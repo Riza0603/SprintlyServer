@@ -568,6 +568,44 @@ catch (err) {
 }
 };
 
+
+export const updateProjectLink = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { link, description,lName, updateData } = req.body;  
+
+    console.log(link, description, projectId, updateData);
+
+    const project = await ProjectModel.findById(projectId);
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    if (updateData === "Add") {
+      if (!link || !description || !lName) {
+        return res.status(400).json({ message: "Link and description are required" });
+      }
+      project.pLinks.push({ link, description, lName });  // Store both link & description
+    } 
+    else if (updateData === "Delete") {
+      project.pLinks = project.pLinks.filter(existingLink => existingLink.link !== link);
+    }
+
+    await project.save();
+    
+    res.status(200).json({ message: "Project updated successfully", project });
+  } catch (err) {
+    console.error("Error updating project:", err);
+    res.status(500).json({ message: "Failed to update project", error: err.message });
+  }
+};
+
+
+
+
+
+
 //Schedules variance
 export const scheduleVariance = async (req, res) => {
   try {
