@@ -42,11 +42,15 @@ export const login = async (req, res) => {
 
     // Generate JWT Token
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "8h" });
+    
+    const secureUser = (({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess }) => 
+      ({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess }))(user.toObject());
+  
 
     res.json({
       success: true,
       message: "Login Successful!",
-      user:user,
+      user:secureUser,
       token,
     });
 
@@ -237,28 +241,18 @@ export const getUser = async (req, res) => {
 };
 
 
-//get the list of all users
-export const getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find().select("name email experience role reportTo "); // Fetch all users
-    res.json({ success: true, users });
-  } catch (error) {
-    handleErrors(error, res);
-  }
-};
-
 //update the user details
 export const updateUser = async (req, res) => {
   try {
-    const { id, email, name, experience, role, reportTo } = req.body;
+    const { _id, email, name, experience, role, reportTo } = req.body;
 
-    const user = await User.findOneAndUpdate({ _id: id }, { name, email, experience, role, reportTo }, { new: true });
+    const user = await User.findOneAndUpdate({ _id: _id }, { name, email, experience, role, reportTo }, { new: true });
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
     // Update username in comments where userId matches
-    await TaskModel.updateMany({ "comments.userId": id }, { $set: { "comments.$[].username": name } });
+    await TaskModel.updateMany({ "comments.userId": _id }, { $set: { "comments.$[].username": name } });
 
     res.json({ success: true, user });
   } catch (error) {
@@ -305,23 +299,12 @@ export const verifyToken = async (req, res) => {
   }
 };
 
-// export const getUsers = async (req, res) => {
-//   try {
-//     console.log("Fetching all users...");  // Debugging
-//     const users = await User.find({}, "-password");  // Exclude passwords for security
-//     res.status(200).json(users);
-//   } catch (err) {
-//     console.error("Error in getUsers:", err.message);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// };
-
 
 
 export const getUsers = async (req, res) => {
   try {
     const users = await User.find({}, "-password");
-    res.status(200).json(users);
+    res.status(200).json({ success: true, users });
   } catch (err) {
     console.error("Error in getUsers:", err.message);
     handleErrors(error, res);

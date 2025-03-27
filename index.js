@@ -10,6 +10,8 @@ import uploadRoutes from "./routes/uploadRoutes.js";
 import tempTimeRoutes from "./routes/tempTimeRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 
+import "./services/deadlineReminder.js";
+
 const app = express();  // Initialize app before using it
 
 app.use(bodyParser.json());  // Now it works because app is initialized

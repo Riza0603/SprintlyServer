@@ -48,7 +48,7 @@ export const addTask = async (req, res) => {
             type: "Task",
             message: `You have been assigned a new task: "${title}" in project "${project.pname}"`,
             entity_id: task._id,
-            metadata: { priority, status, assignedBy: createdBy },
+            metadata: { priority, status, assignedBy: createdBy, startDate, endDate, title, projectName },
           });
         }
       }
@@ -162,6 +162,7 @@ export const getComments = async (req, res) => {
 export const updateStatus = async (req, res) => {
   try {
     const { taskId, status } = req.body;
+   
     if (!taskId || !status) {
       return res.status(400).json({ message: "Task ID and status required" });
     }
@@ -171,9 +172,10 @@ export const updateStatus = async (req, res) => {
     }
 
     const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status, completedOn }, { new: true });
+   
 
     if (!updatedTask) {
-      return res.status(404).json({ message: "Task not found" });
+      return res.status(404).json({ message: "Task not updated" });
     }
 
     res.json({ message: "Task status updated", task: updatedTask });
@@ -230,12 +232,12 @@ export const deleteComment = async (req, res) => {
 export const addsubTask = async (req, res) => {
   try {
     const { taskId } = req.params;
-    const { title } = req.body;
-
-
+    const { title,startDate,endDate } = req.body;
     const newSubTask = {
       _id: new mongoose.Types.ObjectId(),
       title,
+      startDate,
+      endDate
     };
 
     const updateFields = {
@@ -292,11 +294,11 @@ export const deleteSubTask = async (req, res) => {
 export const updateSubTask = async (req, res) => {
   try {
     const { taskId, subTaskId } = req.params;
-    const { title, status } = req.body;
+    const { title, status,startDate,endDate } = req.body;
 
     const updateTask = await TaskModel.findOneAndUpdate(
       { _id: taskId, "subTasks._id": subTaskId },
-      { $set: { "subTasks.$.title": title } },
+      { $set: {"subTasks.$.title": title,"subTasks.$.startDate":startDate,"subTasks.$.endDate":endDate } },
       { new: true },
 
     )
@@ -412,13 +414,14 @@ export const updateSubTaskStatus = async (req, res) => {
     }
 
     const totalSubTasks = updatedTask.subTasks.length;
+    const inProgressLength= updatedTask.subTasks.filter(subtask => subtask.status === "In-Progress").length;
     const completedSubTasksLength = updatedTask.subTasks.filter(subtask => subtask.status === "Completed").length;
 
 
     if (totalSubTasks === completedSubTasksLength) {
       updatedTask.status = "Completed";
       updatedTask.completedOn = new Date();
-    } else if (completedSubTasksLength > 0) {
+    } else if (completedSubTasksLength > 0 || inProgressLength > 0) {
       updatedTask.status = "In-Progress";
     } else {
       updatedTask.status = "No Progress";
@@ -456,6 +459,19 @@ export const fetchTask = async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 };
+
+
+export const updateTaskDates= async (req,res)=>{
+  try{
+    const {id}=req.params;
+    const {startDate, endDate}=req.body;
+    const updateTask= await TaskModel.findByIdAndUpdate(id,{startDate,endDate},{new:true});
+    res.status(200).json(updateTask);
+
+  }catch (error){
+    res.status(500).json({message:"Server error in updateTask()",error:error.message})
+  }
+}
 
 
 

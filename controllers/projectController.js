@@ -178,13 +178,6 @@ export const updateProjectDeletedFile = async (req, res) => {
 };
 
 
-
-
-
-
-
-
-
 export const updateProject = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -352,6 +345,7 @@ export const deleteMember = async (req, res) => {
     // Send removal email
     await sendProjectRemovalEmail(user, projectName);
 
+    // Helper to format date
     const formatDate = (date) => date?.toISOString().split("T")[0];
 
     // Create notification
@@ -405,15 +399,15 @@ export const addMember = async (req, res) => {
       },
       { new: true }
     );
-    //const proj=await ProjectModel.find(projectName);
-    await sendProjectAdditionEmail([member.email], projectName, project.pdescription, project.pstart, project.pend);
+    
 
     // Fetch the name of the project creator
     const creator = await UserModel.findById(project.projectCreatedBy).select("name");
     if (!creator) {
       return res.status(404).json({ message: "Project creator not found" });
     }
-    
+
+    await sendProjectAdditionEmail([member.email], projectName, project.pdescription, project.pstart, project.pend);
     // Create notification
     await createNotification({
       user_id: _id,
@@ -675,7 +669,7 @@ export const effortDistribution = async (req, res) => {
   }
 };
 
-//Project engagement rate
+//Project engagement rate(Time allocation overview)
 export const projectEngagementRate = async (req, res) => {
   try {
     const { projectName } = req.params;
@@ -694,7 +688,6 @@ export const projectEngagementRate = async (req, res) => {
       return res.status(200).json({ projectName, engagementRate: 0, totalMembers, activeUsers: 0, activeUserNames: [] });
     }
 
-    // Fetch active users
     const activeUsers = await TempTimeModel.find({
       projectName,
       started: true,
@@ -703,7 +696,6 @@ export const projectEngagementRate = async (req, res) => {
 
     const activeUserIds = activeUsers.map((user) => user.userId);
 
-    // Fetch active user names
     const activeUserNames = await UserModel.find({ _id: { $in: activeUserIds } },"name");
 
     const engagementRate = (activeUsers.length / totalMembers) * 100;
