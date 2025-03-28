@@ -385,9 +385,9 @@ export const updateTask = async (req, res) => {
         await createNotification({
           user_id: assigneeId,
           type: "TaskUpdate",
-          message: changes.join(" "),
+          message: Object.entries(changes).map(([key, value]) => `${key}: ${value.old} → ${value.new}`).join(", "),
           entity_id: updatedTask._id,
-          metadata: { priority, status, assignedBy: createdBy || "System" },
+          metadata: { priority, status, assignedBy: updatedTask.createdBy },
         });
       }
     }
