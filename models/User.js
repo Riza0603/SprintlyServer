@@ -18,3 +18,4 @@ const userSchema = new mongoose.Schema(
 );
 const UserModel = mongoose.model("registers", userSchema);
 export default UserModel; 
+  
