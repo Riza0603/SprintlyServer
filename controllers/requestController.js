@@ -5,6 +5,7 @@ import Notification from "../models/Notification.js";
 import TaskModel from "../models/Tasks.js";
 import TempTimeModel from "../models/TempTime.js";
 import TimeSheetModel from "../models/TimeSheets.js";
+import axios from 'axios';
 // Approve admin access
 
 export const getAllUsers = async (req, res) => { 
@@ -50,33 +51,47 @@ export const deleteProjectRequestHandler = async (req, res) => {
             await RequestModel.findByIdAndDelete(requestID);
             return res.status(200).json({ success: true, message: "Project deletion request rejected and removed." });
         }
+        else if(decision === "APPROVED"){
 
-        // Proceed with project deletion
-        const projectID = request.projectID;
-        const project = await ProjectModel.findById(projectID);
-        if (!project) {
-            return res.status(404).json({ success: false, message: "Project not found." });
+            const projectID= request.projectID;
+            const myresponse = await axios.delete(`http://localhost:5000/admin/deleteProjectAdmin/${projectID}`);
+            console.log(myresponse);
+            const respooseer=myresponse.data;
+            console.log(myresponse.data.success);
+            if(myresponse.data.success === true)  {
+                return res.status(200).json({success: true, message: "Project deleted successfully"});
+            } 
+            
+
         }
 
-        const projectName = project.pname;
 
-        // Remove references from other collections
-        await Promise.all([
-            Notification.deleteMany({ "metadata.projectName": projectName }),
-            RequestModel.deleteMany({ projectID }),
-            TaskModel.deleteMany({ projectName }),
-            TempTimeModel.deleteMany({ projectName }),
-            TimeSheetModel.updateMany({ "timeSheet.projectsHours.projectName": projectName }, { $pull: { "timeSheet.$[].projectsHours": { projectName } } }),
-            UserModel.updateMany({}, { $pull: { projects: projectName } })
-        ]);
+        // // Proceed with project deletion
+        // const projectID = request.projectID;
+        // const project = await ProjectModel.findById(projectID);
+        // if (!project) {
+        //     return res.status(404).json({ success: false, message: "Project not found." });
+        // }
 
-        // Delete project from ProjectModel
-        await ProjectModel.findByIdAndDelete(projectID);
+        // const projectName = project.pname;
 
-        // Remove the request itself
-        await RequestModel.findByIdAndDelete(requestID);
+        // // Remove references from other collections
+        // await Promise.all([
+        //     Notification.deleteMany({ "metadata.projectName": projectName }),
+        //     RequestModel.deleteMany({ projectID }),
+        //     TaskModel.deleteMany({ projectName }),
+        //     TempTimeModel.deleteMany({ projectName }),
+        //     TimeSheetModel.updateMany({ "timeSheet.projectsHours.projectName": projectName }, { $pull: { "timeSheet.$[].projectsHours": { projectName } } }),
+        //     UserModel.updateMany({}, { $pull: { projects: projectName } })
+        // ]);
 
-        return res.status(200).json({ success: true, message: "Project deleted successfully and references removed." });
+        // // Delete project from ProjectModel
+        // await ProjectModel.findByIdAndDelete(projectID);
+
+        // // Remove the request itself
+        // await RequestModel.findByIdAndDelete(requestID);
+
+        // return res.status(200).json({ success: true, message: "Project deleted successfully and references removed." });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -355,9 +370,11 @@ export const createUserDeletionRequest = async (req, res) => {
 
 export const createProjectDeletionRequest = async (req, res) => {
     try {
-        const { userID, projectID, reason } = req.body;
 
-        if (!userID || !projectID) {
+        const {projectID } =  req.params;
+        const { userID, reason } = req.body;
+        console.log(projectID, userID, reason);
+        if (!userID || !projectID || !reason) {
             return res.status(400).json({ success: false, message: "User ID and Project ID are required" });
         }
 
