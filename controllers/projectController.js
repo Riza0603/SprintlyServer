@@ -742,7 +742,7 @@ export const updateProjects = async (req, res) => {
      if (updateData.members) {
       const formattedMembers = {};
       updateData.members.forEach((memberId) => {
-        formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true, position: "Employee" }; // Default values
+        formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true }; // Default values
       });
 
       // Ensure updated project manager is assigned correct role
