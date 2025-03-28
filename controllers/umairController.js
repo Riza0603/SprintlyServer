@@ -1,4 +1,10 @@
 import User from "../models/User.js";
+import Notification from "../models/Notification.js";
+import Project from "../models/Projects.js";
+import Task from "../models/Tasks.js";
+import TempTime from "../models/TempTime.js";
+import Timesheet from "../models/TimeSheets.js";
+
 
 export const addUser = async (req, res) => {
   try {
@@ -35,18 +41,56 @@ export const addUser = async (req, res) => {
 
 
 
-
 // Delete a user
+
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const user = await User.findByIdAndDelete(id);
+    const userId = id; // Assuming the ID is passed as a parameter
 
-    if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+    // Start a session to ensure atomicity
+    const session = await User.startSession();
+    session.startTransaction();
+
+    try {
+      // Delete the user
+      const user = await User.findByIdAndDelete(userId, { session });
+      if (!user) {
+        await session.abortTransaction();
+        session.endSession();
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      // Delete related notifications
+      await Notification.deleteMany({ user_id: userId }, { session });
+
+      // Remove the user from projects
+      const projects = await Project.find({ "members._id": userId }, { session });
+      for (const project of projects) {
+        delete project.members[userId];
+        await project.save({ session });
+      }
+
+      // Delete related tasks
+      await Task.deleteMany({ assigneeId: userId }, { session });
+
+      // Delete related temp times
+      await TempTime.deleteMany({ userId: userId }, { session });
+
+      // Delete related timesheets
+      await Timesheet.deleteMany({ userId: userId }, { session });
+
+      // Commit the transaction
+      await session.commitTransaction();
+      session.endSession();
+
+      res.json({ success: true, message: "User and related data deleted successfully" });
+    } catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error("Error deleting user and related data:", error);
+      res.status(500).json({ success: false, message: "Internal server error" });
     }
-
-    res.json({ success: true, message: "User deleted successfully" });
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
