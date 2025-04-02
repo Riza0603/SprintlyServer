@@ -103,10 +103,10 @@ export const deleteUser = async (req, res) => {
 // Update a user
 export const updateUser = async (req, res) => {
   try {
-    const { _id, name, email, role, experience, reportTo, projects } = req.body;
+    const { _id, name, email, phone, role, experience, reportTo, projects, password } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
       _id,
-      { name, email, role, experience, reportTo, projects },
+      { name, email, phone, role, experience, reportTo, projects, password },
       { new: true }
     );
 
