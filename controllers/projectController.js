@@ -721,48 +721,91 @@ export const updateProjects = async (req, res) => {
     const { projectId } = req.params;
     const updateData = req.body;
 
-    // Validate: Check if request body is empty
+    // Validate projectId before querying the database
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: "Invalid project ID" });
+    }
+
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ message: "No update data provided" });
     }
 
-    // *Check if a project with the same name already exists (excluding the current project)*
+    // Check if a project with the same name exists (excluding the current one)
     if (updateData.pname) {
-      const existingProject = await ProjectModel.findOne({ 
-        pname: updateData.pname, 
-        _id: { $ne: projectId } // Excluding current project from the check
-      });
+      const existingProjectWithSameName = await ProjectModel.findOne({
+        pname: updateData.pname,
+        _id: { $ne: projectId },
+      }).lean();
 
-      if (existingProject) {
-        return res.status(400).json({ message: "Project with this name already exists. Please choose a different name." });
+      if (existingProjectWithSameName) {
+        return res
+          .status(400)
+          .json({ message: "Project with this name already exists. Please choose a different name." });
       }
     }
 
-     // member update logic for Map type Project.js
-     if (updateData.members) {
+    // Find the existing project
+    const existingProject = await ProjectModel.findById(projectId);
+    if (!existingProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    const oldProjectName = existingProject.pname;
+
+    // Process members update to avoid circular references
+    if (updateData.members) {
+      const newMembersList = updateData.members;
+      const oldMembersList = Object.keys(existingProject.members || {});
       const formattedMembers = {};
-      updateData.members.forEach((memberId) => {
-        formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true }; // Default values
+
+      newMembersList.forEach((memberId) => {
+        if (mongoose.Types.ObjectId.isValid(memberId)) {
+          formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true };
+        }
       });
 
-      // Ensure updated project manager is assigned correct role
+      // Add project manager if available
       if (updateData.projectCreatedBy) {
         formattedMembers[updateData.projectCreatedBy] = {
           notifyinApp: true,
           notifyinEmail: true,
-          position: "Project Manager"
+          position: "Project Manager",
         };
       }
 
-      updateData.members = formattedMembers; // Replace the existing Map properly
+      updateData.members = formattedMembers;
+
+      // Determine added and removed members
+      const addedMembers = newMembersList.filter((member) => !oldMembersList.includes(member));
+      const removedMembers = oldMembersList.filter((member) => !newMembersList.includes(member));
+
+      // Validate added and removed members before updating UserModel
+      const validAddedMembers = addedMembers.filter((memberId) => mongoose.Types.ObjectId.isValid(memberId));
+      const validRemovedMembers = removedMembers.filter((memberId) => mongoose.Types.ObjectId.isValid(memberId));
+
+      // Add project name to newly added members in `registers`
+      if (validAddedMembers.length > 0) {
+        await UserModel.updateMany(
+          { _id: { $in: validAddedMembers.map((id) => new mongoose.Types.ObjectId(id)) } },
+          { $addToSet: { projects: existingProject.pname } }
+        );
+      }
+
+      // Remove project name from members who are removed
+      if (validRemovedMembers.length > 0) {
+        await UserModel.updateMany(
+          { _id: { $in: validRemovedMembers.map((id) => new mongoose.Types.ObjectId(id)) } },
+          { $pull: { projects: oldProjectName } }
+        );
+      }
     }
 
-    // Handle attachments update if it's an array
-    if (updateData.pAttachments) {
-      updateData.pAttachments = { $each: updateData.pAttachments };
+    // Ensure attachments update is handled correctly
+    if (Array.isArray(updateData.pAttachments)) {
+      updateData.pAttachments = updateData.pAttachments; // No need for $each inside $set
     }
 
-    // Perform update
+    // Perform the update on the project
     const updatedProject = await ProjectModel.findByIdAndUpdate(
       projectId,
       { $set: updateData },
@@ -770,11 +813,27 @@ export const updateProjects = async (req, res) => {
     );
 
     if (!updatedProject) {
-      return res.status(404).json({ message: "Project not found" });
+      return res.status(404).json({ message: "Project not found after update." });
     }
 
+    // Update related data in other models when the project name changes
+    if (updateData.pname && updateData.pname !== oldProjectName) {
+      await Promise.all([
+        TaskModel.updateMany({ projectName: oldProjectName }, { $set: { projectName: updateData.pname } }),
+        TempTimeModel.updateMany({ projectName: oldProjectName }, { $set: { projectName: updateData.pname } }),
+        TimeSheetModel.updateMany(
+          { "timeSheet.projectsHours.projectName": oldProjectName },
+          { $set: { "timeSheet.projectsHours.$[elem].projectName": updateData.pname } },
+          { arrayFilters: [{ "elem.projectName": oldProjectName }] }
+        ),
+      ]);
+    }
+
+    // Respond with the updated project
     res.status(200).json({ message: "Project updated successfully", project: updatedProject });
+
   } catch (error) {
+    console.error("Error updating project:", error);
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
