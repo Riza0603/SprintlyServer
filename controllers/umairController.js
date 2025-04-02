@@ -4,6 +4,8 @@ import Project from "../models/Projects.js";
 import Task from "../models/Tasks.js";
 import TempTime from "../models/TempTime.js";
 import Timesheet from "../models/TimeSheets.js";
+import argon2 from "argon2";
+
 
 
 export const addUser = async (req, res) => {
@@ -14,6 +16,7 @@ export const addUser = async (req, res) => {
     if (!name || !email || !phone || !role || !reportTo || !experience || !password) {
       return res.status(400).json({ success: false, message: "Missing required fields" });
     }
+    const newPass= await argon2.hash(password);
 
     const newUser = new User({
       name,
@@ -23,7 +26,7 @@ export const addUser = async (req, res) => {
       reportTo,
       experience,
       projects,
-      password,
+      password: newPass,
       isVerified: true,
     });
 
