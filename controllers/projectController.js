@@ -730,17 +730,15 @@ export const updateProjects = async (req, res) => {
       return res.status(400).json({ message: "No update data provided" });
     }
 
-    // Check if a project with the same name exists (excluding the current one)
+    // Check if project name already exists
     if (updateData.pname) {
       const existingProjectWithSameName = await ProjectModel.findOne({
         pname: updateData.pname,
-        _id: { $ne: projectId },
-      }).lean();
+        _id: { $ne: projectId }
+      });
 
       if (existingProjectWithSameName) {
-        return res
-          .status(400)
-          .json({ message: "Project with this name already exists. Please choose a different name." });
+        return res.status(400).json({ message: "Project with this name already exists. Please choose a different name." });
       }
     }
 
@@ -752,13 +750,14 @@ export const updateProjects = async (req, res) => {
 
     const oldProjectName = existingProject.pname;
 
-    // Process members update to avoid circular references
+    // Prepare members data to avoid circular references
     if (updateData.members) {
       const newMembersList = updateData.members;
       const oldMembersList = Object.keys(existingProject.members || {});
+
       const formattedMembers = {};
 
-      newMembersList.forEach((memberId) => {
+      newMembersList.forEach(memberId => {
         if (mongoose.Types.ObjectId.isValid(memberId)) {
           formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true };
         }
@@ -769,40 +768,47 @@ export const updateProjects = async (req, res) => {
         formattedMembers[updateData.projectCreatedBy] = {
           notifyinApp: true,
           notifyinEmail: true,
-          position: "Project Manager",
+          position: "Project Manager"
         };
       }
 
       updateData.members = formattedMembers;
 
-      // Determine added and removed members
-      const addedMembers = newMembersList.filter((member) => !oldMembersList.includes(member));
-      const removedMembers = oldMembersList.filter((member) => !newMembersList.includes(member));
+      const addedMembers = newMembersList.filter(member => !oldMembersList.includes(member));
+      const removedMembers = oldMembersList.filter(member => !newMembersList.includes(member));
 
-      // Validate added and removed members before updating UserModel
-      const validAddedMembers = addedMembers.filter((memberId) => mongoose.Types.ObjectId.isValid(memberId));
-      const validRemovedMembers = removedMembers.filter((memberId) => mongoose.Types.ObjectId.isValid(memberId));
+      // Handle the updates for users in `registers`
+      const validAddedMembers = addedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
+      const validRemovedMembers = removedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
 
-      // Add project name to newly added members in `registers`
+      // Update `registers` table to replace old project name instead of adding a new one
+      if (updateData.pname && updateData.pname !== oldProjectName) {
+        await UserModel.updateMany(
+          { "projects": oldProjectName },
+          { $set: { "projects.$": updateData.pname } } // Replace old project name with the new one
+        );
+      }
+
+      // Add project name to newly added members in the `registers` table
       if (validAddedMembers.length > 0) {
         await UserModel.updateMany(
-          { _id: { $in: validAddedMembers.map((id) => new mongoose.Types.ObjectId(id)) } },
-          { $addToSet: { projects: existingProject.pname } }
+          { _id: { $in: validAddedMembers.map(id => new mongoose.Types.ObjectId(id)) } },
+          { $addToSet: { projects: updateData.pname } }
         );
       }
 
       // Remove project name from members who are removed
       if (validRemovedMembers.length > 0) {
         await UserModel.updateMany(
-          { _id: { $in: validRemovedMembers.map((id) => new mongoose.Types.ObjectId(id)) } },
+          { _id: { $in: validRemovedMembers.map(id => new mongoose.Types.ObjectId(id)) } },
           { $pull: { projects: oldProjectName } }
         );
       }
     }
 
-    // Ensure attachments update is handled correctly
+    // Handle the update of other fields such as attachments, project status, etc.
     if (Array.isArray(updateData.pAttachments)) {
-      updateData.pAttachments = updateData.pAttachments; // No need for $each inside $set
+      updateData.pAttachments = { $each: updateData.pAttachments };
     }
 
     // Perform the update on the project
@@ -821,11 +827,13 @@ export const updateProjects = async (req, res) => {
       await Promise.all([
         TaskModel.updateMany({ projectName: oldProjectName }, { $set: { projectName: updateData.pname } }),
         TempTimeModel.updateMany({ projectName: oldProjectName }, { $set: { projectName: updateData.pname } }),
+        
+        // Correctly updating project names inside arrays in TimeSheet
         TimeSheetModel.updateMany(
-          { "timeSheet.projectsHours.projectName": oldProjectName },
-          { $set: { "timeSheet.projectsHours.$[elem].projectName": updateData.pname } },
-          { arrayFilters: [{ "elem.projectName": oldProjectName }] }
-        ),
+          { "timeSheet.projectsHours.projectName": oldProjectName }, // Find all documents where old project name exists
+          { $set: { "timeSheet.$[].projectsHours.$[elem].projectName": updateData.pname } }, // Replace old name with new one
+          { arrayFilters: [{ "elem.projectName": oldProjectName }] } // Ensure update happens where name matches
+        )
       ]);
     }
 
