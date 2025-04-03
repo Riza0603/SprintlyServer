@@ -6,6 +6,8 @@ import TaskModel from "../models/Tasks.js";
 import TempTimeModel from "../models/TempTime.js";
 import TimeSheetModel from "../models/TimeSheets.js";
 import axios from 'axios';
+import { deleteFilesFromS3 } from "../config/S3functions.js";
+
 // Approve admin access
 
 export const getAllUsers = async (req, res) => { 
@@ -137,6 +139,47 @@ export const deleteUserRequestHandler = async (req, res) => {
         if (!userExists) {
             return res.status(404).json({ success: false, message: "User not found." });
         }
+
+
+        let fileUrlsToDelete = [];
+        const tasks = await TaskModel.find({
+            $or: [
+                { assigneeId: userID },
+                { createdById: userID },
+                { "comments.userId": userID }
+            ]
+        });
+                console.log("tasks:",tasks);
+    tasks.forEach((task) => {
+      task.comments.forEach((comment) => {
+        if (comment.attachments?.length) {
+          fileUrlsToDelete.push(...comment.attachments);
+        }
+      });
+    });
+    console.log("files: ", fileUrlsToDelete);
+    try{
+        // First, delete the files from S3
+        if (fileUrlsToDelete.length > 0) {
+          const fileNamesArray = fileUrlsToDelete.map((url) =>
+            Array.isArray(url) ? url : [url]  // Wrap each url in an array if it's not already an array
+          );
+          console.log("ayein:",fileNamesArray);
+    
+          const deletePromises = fileNamesArray.map((fileUrl) =>
+    
+            deleteFilesFromS3(fileUrl) // Assume deleteFilesS3 is a function that handles file deletion from S3
+          );
+    
+          // Wait for all file deletions to complete
+          await Promise.all(deletePromises);
+          console.log("all files related to this have been delted",fileUrlsToDelete);
+        }
+      }
+      catch {console.log("error deleteing files");
+        return res
+        .status(404)
+        .json({ success: false, message: "fiole sdfsdfn not deltedddddd" });  }
 
         // Remove references from other collections
         await Promise.all([
