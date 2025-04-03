@@ -17,7 +17,7 @@ export const createProject = async (req, res) => {
 
   try {
     const existingProject = await ProjectModel.findOne({ pname })
-    .collation({ locale: "en", strength: 2 });  //case insesitive search
+      .collation({ locale: "en", strength: 2 });  //case insesitive search
     if (existingProject) {
       return res.status(400).json({
         message: "Project with the same name already exists",
@@ -30,15 +30,15 @@ export const createProject = async (req, res) => {
       return res.status(404).json({ message: "Project creator not found" });
     }
 
-   // Convert array of memberIds into a Map object
-   const membersMap = {};
-   members.forEach(memberId => {
-     membersMap[memberId] = {
-       notifyinApp: true,
-       notifyinEmail: true,
-       position: memberId === projectCreatedBy ? "Project Manager" : "Employee",
-     };
-   });
+    // Convert array of memberIds into a Map object
+    const membersMap = {};
+    members.forEach(memberId => {
+      membersMap[memberId] = {
+        notifyinApp: true,
+        notifyinEmail: true,
+        position: memberId === projectCreatedBy ? "Project Manager" : "Employee",
+      };
+    });
 
     const project = await ProjectModel.create({ pname, pdescription, projectCreatedBy, pstart, pend, members: membersMap });
 
@@ -112,7 +112,7 @@ export const getProjectByName = async (req, res) => {
 
     res.status(200).json(project);
   } catch (err) {
-    console.error(err); 
+    console.error(err);
     res.status(500).json({ message: "Error in getProjectByName()" });
   }
 };
@@ -206,7 +206,7 @@ export const updateProject = async (req, res) => {
       { new: true }  // `new: true` returns the updated document
     );
 
-   
+
 
     res.status(200).json({ message: "Project updated successfully", updatedProject });
   } catch (error) {
@@ -230,7 +230,7 @@ export const updateGlobalSettings = async (req, res) => {
           [`members.${req.body.userId}.notifyinEmail`]: notifyEmail,
         },
       }
-    );    
+    );
 
     return res.status(200).json({
       message: "Global settings updated successfully",
@@ -401,7 +401,7 @@ export const addMember = async (req, res) => {
       },
       { new: true }
     );
-    
+
 
     // Fetch the name of the project creator
     const creator = await UserModel.findById(project.projectCreatedBy).select("name");
@@ -421,7 +421,7 @@ export const addMember = async (req, res) => {
         createdBy: creator.name || "Someone",
         startDate: formatDate(project.pstart),
         endDate: formatDate(project.pend),
-      },      
+      },
     });
 
     res.status(200).json(member);
@@ -436,21 +436,21 @@ const formatDate = (date) => {
 
 
 //delete from both user and project table
-export const deleteUser= async (req,res)=>{
-  try{
-    const memberId=req.params.memberId;
-   
+export const deleteUser = async (req, res) => {
+  try {
+    const memberId = req.params.memberId;
+
     const updateProject = await ProjectModel.updateMany(
       { [`members.${memberId}`]: { $exists: true } },
       { $unset: { [`members.${memberId}`]: "" } }
     );
 
     const updateUser = await UserModel.findByIdAndDelete(memberId);
-    if(!updateProject){
-      return res.status(404).json({ message: "Member not found in project",  });
+    if (!updateProject) {
+      return res.status(404).json({ message: "Member not found in project", });
     }
     res.status(200).json({ message: "Member deleted successfully" });
-  }catch(err){
+  } catch (err) {
     res.status(500).json({ message: "Error deleting member", err });
   }
 }
@@ -552,20 +552,20 @@ export const fetchWorkLoad = async (req, res) => {
 
 
 //get project name by creator id
-export const getProjectByManager=async(req,res)=>{
-  try{
-    const {projectCreatedById}=req.params;
-    const project=await ProjectModel.find({projectCreatedBy:projectCreatedById},"pname");
-   
-    if(!project){
-      return res.status(404).json({message:"No project found"})
+export const getProjectByManager = async (req, res) => {
+  try {
+    const { projectCreatedById } = req.params;
+    const project = await ProjectModel.find({ projectCreatedBy: projectCreatedById }, "pname");
+
+    if (!project) {
+      return res.status(404).json({ message: "No project found" })
     }
-    res.status(200).json(project);  
-}
-catch (err) {
-  console.error("Error:", err);
-  res.status(500).json({ error: err.message });
-}
+    res.status(200).json(project);
+  }
+  catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 //Schedules variance
@@ -623,14 +623,14 @@ export const effortDistribution = async (req, res) => {
       return res.status(404).json({ message: "No time logs found for this project" });
     }
 
-    let userTotalHours = {}; 
-    let userProjectHours = {}; 
+    let userTotalHours = {};
+    let userProjectHours = {};
 
     for (const timesheet of timesheets) {
       for (const entry of timesheet.timeSheet) {
         for (const project of entry.projectsHours) {
           if (project.status === "Approved") {  // Extract time only if status is Approved
-            const timeInHours = project.time / (1000 * 60 * 60); 
+            const timeInHours = project.time / (1000 * 60 * 60);
             const userId = timesheet.userId.toString();
 
             if (!userTotalHours[userId]) {
@@ -682,9 +682,9 @@ export const projectEngagementRate = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    const totalMembers = project.members instanceof Map 
-    ? project.members.size 
-    : Object.keys(project.members || {}).filter(key => !key.startsWith("$")).length;
+    const totalMembers = project.members instanceof Map
+      ? project.members.size
+      : Object.keys(project.members || {}).filter(key => !key.startsWith("$")).length;
 
     if (totalMembers === 0) {
       return res.status(200).json({ projectName, engagementRate: 0, totalMembers, activeUsers: 0, activeUserNames: [] });
@@ -698,7 +698,7 @@ export const projectEngagementRate = async (req, res) => {
 
     const activeUserIds = activeUsers.map((user) => user.userId);
 
-    const activeUserNames = await UserModel.find({ _id: { $in: activeUserIds } },"name");
+    const activeUserNames = await UserModel.find({ _id: { $in: activeUserIds } }, "name");
 
     const engagementRate = (activeUsers.length / totalMembers) * 100;
 
@@ -749,34 +749,36 @@ export const updateProjects = async (req, res) => {
     }
 
     const oldProjectName = existingProject.pname;
-
-    // Convert Mongoose Map to Plain Object and Extract Old Members List
-    const oldMembersList = existingProject.members
-      ? Array.from(existingProject.members.keys()) // Correct extraction
-      : [];
+    const oldMembersList = existingProject.members instanceof Map
+      ? Array.from(existingProject.members.keys()) // Extract keys if it's a Map
+      : Object.keys(existingProject.members || {});
 
     // Ensure `members` are formatted correctly before updating
     if (updateData.members) {
-      const formattedMembers = new Map();
-
+      const formattedMembers = {};
       updateData.members.forEach(memberId => {
         if (mongoose.Types.ObjectId.isValid(memberId)) {
-          formattedMembers.set(memberId, { notifyinApp: true, notifyinEmail: true });
+          formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true };
         }
       });
 
       if (updateData.projectCreatedBy) {
-        formattedMembers.set(updateData.projectCreatedBy, {
+        formattedMembers[updateData.projectCreatedBy] = {
           notifyinApp: true,
           notifyinEmail: true,
           position: "Project Manager"
-        });
+        };
       }
 
-      updateData.members = Object.fromEntries(formattedMembers);
+      updateData.members = formattedMembers;
     }
 
-    // Perform the update FIRST
+    // Handle attachments update correctly
+    if (Array.isArray(updateData.pAttachments)) {
+      updateData.pAttachments = { $each: updateData.pAttachments };
+    }
+
+    // Perform the update (ONLY ONCE)
     const updatedProject = await ProjectModel.findByIdAndUpdate(
       projectId,
       { $set: updateData },
@@ -788,18 +790,25 @@ export const updateProjects = async (req, res) => {
     }
 
     // Extract updated members list after update
-    const updatedMembersList = updatedProject.members
+    const updatedMembersList = updatedProject.members instanceof Map
       ? Array.from(updatedProject.members.keys())
-      : [];
+      : Object.keys(updatedProject.members || {});
 
-    // Identify removed members
+    //console.log("Old Members:", oldMembersList);
+    //console.log("Updated Members:", updatedMembersList);
+
+    // Identify removed and added members
     const removedMembers = oldMembersList.filter(member => !updatedMembersList.includes(member));
     const validRemovedMembers = removedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
 
-    console.log("Old Members:", oldMembersList);
-    console.log("Updated Members:", updatedMembersList);
-    console.log("Removed Members:", removedMembers);
-    console.log("Valid Removed Members:", validRemovedMembers);
+    const addedMembers = updatedMembersList.filter(member => !oldMembersList.includes(member));
+    const validAddedMembers = addedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
+
+    //console.log("Old Members:", oldMembersList);
+    //console.log("Updated Members:", updatedMembersList);
+    //console.log("Removed Members:", removedMembers);
+    //console.log("Valid Removed Members:", validRemovedMembers);
+    //console.log("Valid Added Members:", validAddedMembers);
 
     // Remove project name from `registers` for removed members
     if (validRemovedMembers.length > 0) {
@@ -810,9 +819,6 @@ export const updateProjects = async (req, res) => {
     }
 
     // Add project name to newly added members in the `registers` table 
-    const addedMembers = updatedMembersList.filter(member => !oldMembersList.includes(member));
-    const validAddedMembers = addedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
-
     if (validAddedMembers.length > 0) {
       await UserModel.updateMany(
         { _id: { $in: validAddedMembers } },
@@ -820,24 +826,7 @@ export const updateProjects = async (req, res) => {
       );
     }
 
-    // Handle the update of other fields such as attachments, project status, etc.
-    if (Array.isArray(updateData.pAttachments)) {
-      updateData.pAttachments = { $each: updateData.pAttachments };
-    }
-
-    // Perform the update again on the project
-    const finalUpdatedProject = await ProjectModel.findByIdAndUpdate(
-      projectId,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    );
-
-    // Ensure project was updated successfully
-    if (!finalUpdatedProject) {
-      return res.status(404).json({ message: "Project not found after final update." });
-    }
-
-    // Update `registers` table to replace old project name instead of adding a new one
+    // Update `registers` table to replace old project name
     if (updateData.pname && updateData.pname !== oldProjectName) {
       await UserModel.updateMany(
         { "projects": oldProjectName },
@@ -853,14 +842,14 @@ export const updateProjects = async (req, res) => {
 
         // Correctly updating project names inside arrays in TimeSheet
         TimeSheetModel.updateMany(
-          { "timeSheet.projectsHours.projectName": oldProjectName }, // Find all documents where old project name exists
-          { $set: { "timeSheet.$[].projectsHours.$[elem].projectName": updateData.pname } }, // Replace old name with new one
-          { arrayFilters: [{ "elem.projectName": oldProjectName }] } // Ensure update happens where name matches
+          { "timeSheet.projectsHours.projectName": oldProjectName },
+          { $set: { "timeSheet.$[].projectsHours.$[elem].projectName": updateData.pname } },
+          { arrayFilters: [{ "elem.projectName": oldProjectName }] }
         )
       ]);
     }
 
-    res.status(200).json({ message: "Project updated successfully", project: finalUpdatedProject });
+    res.status(200).json({ message: "Project updated successfully", project: updatedProject });
 
   } catch (error) {
     console.error("Error updating project:", error);
