@@ -789,21 +789,24 @@ export const updateProjects = async (req, res) => {
         );
       }
 
+      console.log("validAddedMembers", validAddedMembers);
+      console.log("RemovedMembers", removedMembers);
+      console.log("valid removedmembers", validRemovedMembers);
+      // Remove project name from members who are removed
+      if (validRemovedMembers.length > 0) {
+        await UserModel.updateMany(
+          { _id: { $in: validRemovedMembers.map(id => new mongoose.Types.ObjectId(id)) } },
+          { $pull: { projects: { $in: [oldProjectName, updateData.pname || oldProjectName] } } }
+        );
+      }
+
       // Add project name to newly added members in the `registers` table
       if (validAddedMembers.length > 0) {
         await UserModel.updateMany(
           { _id: { $in: validAddedMembers.map(id => new mongoose.Types.ObjectId(id)) } },
           { $addToSet: { projects: updateData.pname } }
         );
-      }
-
-      // Remove project name from members who are removed
-      if (validRemovedMembers.length > 0) {
-        await UserModel.updateMany(
-          { _id: { $in: validRemovedMembers.map(id => new mongoose.Types.ObjectId(id)) } },
-          { $pull: { projects: oldProjectName } }
-        );
-      }
+      }      
     }
 
     // Handle the update of other fields such as attachments, project status, etc.
