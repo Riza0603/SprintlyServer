@@ -170,14 +170,12 @@ export const updateStatus = async (req, res) => {
     if (status === "Completed") {
       completedOn = new Date();
     }
-
-    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status, completedOn }, { new: true });
-   
-
+    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status, completedOn }, { new: true }); 
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not updated" });
     }
 
+    
     res.json({ message: "Task status updated", task: updatedTask });
   } catch (error) {
     console.error("Error updating task:", error);
@@ -321,23 +319,8 @@ export const updateTask = async (req, res) => {
       return res.status(404).json({ message: "Task not found" });
     }
 
-    let change = [];
-
-    if (title && title !== existingTask.title) {
-      change.push(`Title changed from "${existingTask.title}" to "${title}".`);
-    }
-    if (status && status !== existingTask.status) {
-      change.push(`Status changed from "${existingTask.status}" to "${status}".`);
-    }
-    if (priority && priority !== existingTask.priority) {
-      change.push(`Priority updated from "${existingTask.priority}" to "${priority}".`);
-    }
-    if (endDate && endDate !== existingTask.endDate?.toISOString().split("T")[0]) {
-      change.push(`Due date updated to "${endDate}".`);
-    }
-
     const changes = {};
-    for (const key of ["title", "description", "assignee", "priority", "startDate", "endDate"]) {
+    for (const key of ["title", "description", "assignee", "priority", "status", "startDate", "endDate"]) {
       const normalizeDate = (date) => (date ? new Date(date).toISOString().split("T")[0] : null);
 
     let oldValue = existingTask[key];
@@ -385,9 +368,9 @@ export const updateTask = async (req, res) => {
         await createNotification({
           user_id: assigneeId,
           type: "TaskUpdate",
-          message: changes.join(" "),
+          message: Object.entries(changes).map(([key, value]) => `${key}: ${value.old} → ${value.new}`).join(", "),
           entity_id: updatedTask._id,
-          metadata: { priority, status, assignedBy: createdBy || "System" },
+          metadata: { priority, status, assignedBy: updatedTask.createdBy },
         });
       }
     }
@@ -396,7 +379,6 @@ export const updateTask = async (req, res) => {
     res.status(500).json({ message: "Server error in updateTask()", error: error.message });
   }
 };
-
 
 
 //update subtask status
@@ -472,6 +454,8 @@ export const updateTaskDates= async (req,res)=>{
     res.status(500).json({message:"Server error in updateTask()",error:error.message})
   }
 }
+
+
 
 
 

@@ -5,8 +5,7 @@ import UserModel from "../models/User.js";
 
 export const startTimer = async (req, res) => {
     try {
-        const { userId, startTime, elapsedTime, breakTime } = req.body;
-        
+        console.log("start")        
         const tempTimeData = {
         userId: req.body.userId,
         startTime: req.body.startTime,

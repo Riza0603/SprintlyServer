@@ -1,5 +1,5 @@
 import express from "express";
-import { createProject,fetchProjectData, fetchProjects,getProjectFiles,updateGlobalSettings, updateProjectDeletedFile, updateProject,updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName, fetchDetails, fetchProjectsById, getProjectByManager } from "../controllers/projectController.js";
+import { createProject,fetchProjectData, fetchProjects,getProjectFiles,updateGlobalSettings, updateProjectDeletedFile, updateProject,updateProjectSettings, getMembers, deleteMember, addMember,  deleteUser, getProjectByName, fetchDetails, fetchProjectsById, getProjectByManager, updateProjectStatus } from "../controllers/projectController.js";
 
 const router = express.Router();
 
@@ -21,4 +21,6 @@ router.post("/getProjectFiles/:projectId",getProjectFiles);router.get("/getProje
 
 
 router.post("/getProjectFiles/:projectId",getProjectFiles);
+router.post("/updateProjectStatus/:projectName",updateProjectStatus);//update project status
+
 export default router;
