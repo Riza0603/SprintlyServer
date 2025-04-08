@@ -5,8 +5,10 @@ import ProjectModel from "../models/Projects.js";
 import { createNotification } from "./notificationController.js";
 import { sendStatusEmail } from "../services/emailService.js";
 
+
 export const startTimer = async (req, res) => {
     try {
+        console.log("start")        
         const { userId, startTime, elapsedTime, breakTime } = req.body;
 
         const tempTimeData = {
@@ -228,6 +230,9 @@ export const updateTimeSheetStatus = async (req, res) => {
     try {
         const { userId, projectHoursId, status, comments } = req.body;
 
+       
+
+
         const user = await UserModel.findById(userId);
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -247,10 +252,12 @@ export const updateTimeSheetStatus = async (req, res) => {
             }
         );
 
+
         if (!updatedEntry) {
             return res.status(404).json({ message: "Project entry not found" });
         }
 
+    
         const matchingSheet = updatedEntry.timeSheet.find(sheet =>
             sheet.projectsHours.some(ph => ph._id.toString() === projectHoursId)
         );
