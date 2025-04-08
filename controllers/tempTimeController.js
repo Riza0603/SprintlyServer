@@ -3,7 +3,7 @@ import TimeSheetModel from "../models/TimeSheets.js";
 import UserModel from "../models/User.js";
 import ProjectModel from "../models/Projects.js";
 import { createNotification } from "./notificationController.js";
-
+import { sendStatusEmail } from "../services/emailService.js";
 
 export const startTimer = async (req, res) => {
     try {
@@ -194,6 +194,7 @@ export const fetchTimeEntries = async (req, res) => {
 
 
 
+//Fetching all the timesheet for the pending projects with user details
 
 export const getAllUserTimesheet = async (req, res) => {
     try {
@@ -226,58 +227,152 @@ export const getAllUserTimesheet = async (req, res) => {
 export const updateTimeSheetStatus = async (req, res) => {
     try {
         const { userId, projectHoursId, status, comments } = req.body;
-        // Find the specific user and update the project inside any timeSheet entry
+
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
         const updatedEntry = await TimeSheetModel.findOneAndUpdate(
             { userId, "timeSheet.projectsHours._id": projectHoursId },
-            {
-                $set: {
+            { 
+                $set: { 
                     "timeSheet.$[].projectsHours.$[inner].status": status,
-                    "timeSheet.$[].projectsHours.$[inner].comment": comments
+                    "timeSheet.$[].projectsHours.$[inner].comment": comments 
                 }
             },
             {
                 new: true,
-                arrayFilters: [
-                    { "inner._id": projectHoursId }
-                ]
+                arrayFilters: [{ "inner._id": projectHoursId }]
             }
         );
+
         if (!updatedEntry) {
             return res.status(404).json({ message: "Project entry not found" });
         }
 
-        //Get the affected project entry for details
         const matchingSheet = updatedEntry.timeSheet.find(sheet =>
             sheet.projectsHours.some(ph => ph._id.toString() === projectHoursId)
         );
+        
+        if (!matchingSheet) {
+            return res.status(404).json({ message: "Matching timesheet not found" });
+        }
+        
         const projectHour = matchingSheet.projectsHours.find(ph => ph._id.toString() === projectHoursId);
+        
+        if (!projectHour) {
+            return res.status(404).json({ message: "Project not found" });
+        }
 
         const project = await ProjectModel.findOne({ pname: projectHour.projectName });
         if (project && project.members.has(userId)) {
             const assigneeMember = project.members.get(userId);
 
             if (assigneeMember.notifyinApp) {
-
-                    await createNotification({
-                        user_id: userId,
-                        type: "Timesheet",
-                        message: `Your timesheet entry for project "${projectHour.projectName}" on ${matchingSheet.date} has been ${status}.`,
-                        entity_id: projectHoursId,
-                        metadata: {
-                            projectName: projectHour.projectName,
-                            date: matchingSheet.date,
-                            status,
-                            comment: comments || "",
-                        },
-                    });
-                
-                }
+                await createNotification({
+                    user_id: userId,
+                    type: "Timesheet",
+                    message: `Your timesheet entry for project \"${projectHour.projectName}\" on ${matchingSheet.date} has been ${status}.`,
+                    entity_id: projectHoursId,
+                    metadata: {
+                        projectName: projectHour.projectName,
+                        date: matchingSheet.date,
+                        status,
+                        comment: comments || "",
+                    },
+                });
             }
-        
+
+            if (assigneeMember.notifyinEmail) {
+                await sendStatusEmail(user, projectHour.projectName, status, comments, matchingSheet.date);
+            }
+        }
 
         res.status(200).json(updatedEntry);
     } catch (err) {
         console.error("Error updating timesheet:", err);
         res.status(500).json({ message: "Internal Server Error", error: err.message });
+    }
+};
+  
+
+
+export const getPendingTimeSheets = async (req, res) => {
+    try {
+        const { projectName } = req.body;
+
+        if (!projectName) {
+            return res.status(400).json({ error: "Project name is required" });
+        }
+
+        const timesheets = await TimeSheetModel.find({
+            "timeSheet.projectsHours": { 
+                $elemMatch: { projectName: projectName } 
+            }
+        }).populate("userId", "name email"); // Populate user details
+        
+
+        if (!timesheets.length) {
+            return res.status(404).json({ message: "No pending timesheets found for this project" });
+        }
+
+        // Filter only pending timesheets (assuming a `status: "pending"` exists in each entry)
+        const pendingTimeSheets = timesheets.map((timesheet) => ({
+            userName: timesheet.userId.name,
+            email: timesheet.userId.email,
+            timeSheet: timesheet.timeSheet.filter(ts =>
+                ts.projectsHours.some(ph => ph.projectName === projectName)
+            ),
+        }));
+
+        res.status(200).json({ pendingTimeSheets });
+
+    } catch (error) {
+        console.error("Error fetching pending timesheets:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+};
+
+// fetching all the timesheets on project input
+
+export const getTimesheetsByProject = async (req, res) => {
+    try {
+        const { projectName } = req.body; // Extract project name from request body
+
+        if (!projectName) {
+            return res.status(400).json({ message: "Project name is required." });
+        }
+
+        // Find timesheets where the project exists
+        const timesheets = await TimeSheetModel.find({
+            "timeSheet.projectsHours.projectName": projectName
+        }).populate("userId", "name email"); // Populate user details (name, email)
+
+        if (!timesheets.length) {
+            return res.status(404).json({ message: "No timesheets found for this project." });
+        }
+
+        // ✅ Filter timesheet to include only relevant project entries
+        const response = timesheets.map(timesheet => {
+            return {
+                user: {
+                    id: timesheet.userId._id,
+                    name: timesheet.userId.name,
+                    email: timesheet.userId.email
+                },
+                timeSheet: timesheet.timeSheet
+                    .map(entry => ({
+                        date: entry.date,
+                        projectsHours: entry.projectsHours.filter(project => project.projectName === projectName)
+                    }))
+                    .filter(entry => entry.projectsHours.length > 0) // Remove empty entries
+            };
+        });
+
+        res.status(200).json(response);
+    } catch (error) {
+        console.error("Error fetching timesheets:", error);
+        res.status(500).json({ message: "Internal server error." });
     }
 };

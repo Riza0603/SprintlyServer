@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 import TaskModel from "../models/Tasks.js";
 import PendingUser from "../models/PendingUser.js";
 import { sendEmail } from "../services/emailService.js";
+const mongoose = import('mongoose');
 
 //errorHandler
 const handleErrors = (err, res) => {
@@ -250,7 +251,6 @@ export const updateUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-
     // Update username in comments where userId matches
     await TaskModel.updateMany({ "comments.userId": _id }, { $set: { "comments.$[].username": name } });
 
@@ -321,5 +321,3 @@ export const fetchById = async (req, res) => {
     handleErrors(error, res);
   }
 };
-
-

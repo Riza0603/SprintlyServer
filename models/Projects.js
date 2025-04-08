@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
 
+
 const ProjectSchema = new mongoose.Schema({
   pname: String,
   pdescription: String,
   pstart: Date,
   pend: Date,
-  projectCreatedBy: { type: mongoose.Schema.Types.ObjectId, required: true, ref: "User" },
+  projectCreatedBy: { type: mongoose.Schema.Types.ObjectId},
   members: {
     type: Map, // Use a Map to store objectId as key and notify details as value
     of: new mongoose.Schema({
@@ -17,7 +18,11 @@ const ProjectSchema = new mongoose.Schema({
   pstatus: { type: String, default: "In-Progress" },
 
   pAttachments:[{ type: String }],
-});
+  pLinks: [{
+    link: { type: String },
+    lName: {type: String},
+    description: { type: String }
+  }],});
 
 const ProjectModel = mongoose.model("Projects", ProjectSchema);
 

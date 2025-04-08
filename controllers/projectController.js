@@ -89,9 +89,7 @@ export const createProject = async (req, res) => {
   }
 };
 
-
-
-//fetches projects by
+//fetches projects
 export const fetchProjects = async (req, res) => {
   try {
     const projects = await ProjectModel.find();
@@ -103,16 +101,21 @@ export const fetchProjects = async (req, res) => {
 };
 
 //fetch project by name
-export const getProjectByName=async(req,res)=>{
-  try{
-    
-    const {projectTitle}=req.params;
-    const project= await ProjectModel.findOne({pname:projectTitle});
-    res.status(200).json(project)
-    }catch(err){
-      res.status(500).json({message:"Error in getProjectByName()"},err)
+export const getProjectByName = async (req, res) => {
+  try {
+    const { projectTitle } = req.params;
+    const project = await ProjectModel.findOne({ pname: projectTitle });
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json(project);
+  } catch (err) {
+    console.error(err); 
+    res.status(500).json({ message: "Error in getProjectByName()" });
   }
-}
+};
 
 
 export const getProjectFiles = async (req, res) => {
@@ -203,7 +206,7 @@ export const updateProject = async (req, res) => {
       { new: true }  // `new: true` returns the updated document
     );
 
-    
+   
 
     res.status(200).json({ message: "Project updated successfully", updatedProject });
   } catch (error) {
@@ -214,14 +217,13 @@ export const updateProject = async (req, res) => {
 
 
 
-
 // Update global notification settings
 export const updateGlobalSettings = async (req, res) => {
   const { notifyInApp, notifyEmail } = req.body;
 
   try {
     await ProjectModel.updateMany(
-      { [`members.${req.body.userId}`]: { $exists: true } }, 
+      { [`members.${req.body.userId}`]: { $exists: true } },
       {
         $set: {
           [`members.${req.body.userId}.notifyinApp`]: notifyInApp,
@@ -252,7 +254,7 @@ export const updateProjectSettings = async (req, res) => {
 
   try {
     const updatedProject = await ProjectModel.findOneAndUpdate(
-      { _id: projectId, [`members.${userId}`]: { $exists: true } }, 
+      { _id: projectId, [`members.${userId}`]: { $exists: true } },
       {
         $set: {
           [`members.${userId}.notifyinApp`]: notifyInApp,
@@ -437,10 +439,10 @@ const formatDate = (date) => {
 export const deleteUser= async (req,res)=>{
   try{
     const memberId=req.params.memberId;
-    
+   
     const updateProject = await ProjectModel.updateMany(
-      { [`members.${memberId}`]: { $exists: true } }, 
-      { $unset: { [`members.${memberId}`]: "" } } 
+      { [`members.${memberId}`]: { $exists: true } },
+      { $unset: { [`members.${memberId}`]: "" } }
     );
 
     const updateUser = await UserModel.findByIdAndDelete(memberId);
@@ -565,6 +567,44 @@ catch (err) {
   res.status(500).json({ error: err.message });
 }
 };
+
+
+export const updateProjectLink = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { link, description,lName, updateData } = req.body;  
+
+    console.log(link, description, projectId, updateData);
+
+    const project = await ProjectModel.findById(projectId);
+
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    if (updateData === "Add") {
+      if (!link || !description || !lName) {
+        return res.status(400).json({ message: "Link and description are required" });
+      }
+      project.pLinks.push({ link, description, lName });  // Store both link & description
+    } 
+    else if (updateData === "Delete") {
+      project.pLinks = project.pLinks.filter(existingLink => existingLink.link !== link);
+    }
+
+    await project.save();
+    
+    res.status(200).json({ message: "Project updated successfully", project });
+  } catch (err) {
+    console.error("Error updating project:", err);
+    res.status(500).json({ message: "Failed to update project", error: err.message });
+  }
+};
+
+
+
+
+
 
 //Schedules variance
 export const scheduleVariance = async (req, res) => {
@@ -712,3 +752,85 @@ export const projectEngagementRate = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+//Update Project admin
+export const updateProjects = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const updateData = req.body;
+
+    // Validate: Check if request body is empty
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ message: "No update data provided" });
+    }
+
+    // *Check if a project with the same name already exists (excluding the current project)*
+    if (updateData.pname) {
+      const existingProject = await ProjectModel.findOne({ 
+        pname: updateData.pname, 
+        _id: { $ne: projectId } // Excluding current project from the check
+      });
+
+      if (existingProject) {
+        return res.status(400).json({ message: "Project with this name already exists. Please choose a different name." });
+      }
+    }
+
+     // member update logic for Map type Project.js
+     if (updateData.members) {
+      const formattedMembers = {};
+      updateData.members.forEach((memberId) => {
+        formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true, position: "Employee" }; // Default values
+      });
+
+      // Ensure updated project manager is assigned correct role
+      if (updateData.projectCreatedBy) {
+        formattedMembers[updateData.projectCreatedBy] = {
+          notifyinApp: true,
+          notifyinEmail: true,
+          position: "Project Manager"
+        };
+      }
+
+      updateData.members = formattedMembers; // Replace the existing Map properly
+    }
+
+    // Handle attachments update if it's an array
+    if (updateData.pAttachments) {
+      updateData.pAttachments = { $each: updateData.pAttachments };
+    }
+
+    // Perform update
+    const updatedProject = await ProjectModel.findByIdAndUpdate(
+      projectId,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json({ message: "Project updated successfully", project: updatedProject });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
+
+//Delete Project Admin
+export const deleteProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    const deletedProject = await ProjectModel.findByIdAndDelete(projectId);
+   
+    if (!deletedProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    res.status(200).json({ message: "Project deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+
+}
