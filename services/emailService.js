@@ -384,3 +384,39 @@ export const sendStatusEmail = async (user, projectName, status, comments = "", 
       `,
   });
 };
+
+//Admin Access Status Email
+export const sendAdminAccessStatusEmail = async (user, status, decidedBy) => {
+  if (!user.email) return;
+
+  const isRejected = status === "REJECTED";
+  const subject = `Your admin access request has been ${isRejected ? "rejected" : "approved"}`;
+  const statusColor = isRejected ? "#d32f2f" : "#388e3c";
+  const statusText = isRejected ? "rejected" : "approved";
+
+  await transporter.sendMail({
+      from: "sprintlyganglia@gmail.com",
+      to: user.email,
+      subject,
+      html: `
+          <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
+              <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
+                          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+                  <h2 style="color: ${statusColor};">Admin Access ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}</h2>
+                  <p style="color: #555; font-size: 16px;">
+                      Hello ${user.name}, your request for admin access has been 
+                      <strong style="color: ${statusColor};">${statusText}</strong> by 
+                      <strong style="color: #2563eb;">${decidedBy}</strong>.
+                  </p>
+                  <p style="color: #555; font-size: 14px;">
+                      ${isRejected ? "Feel free to contact the admin for further clarification." : "You can now access admin features in the system."}
+                  </p>
+                  <footer style="margin-top: 20px; font-size: 12px; color: #888;">
+                      <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+                  </footer>
+              </div>
+          </div>
+      `,
+  });
+};
+

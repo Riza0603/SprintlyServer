@@ -7,6 +7,8 @@ import TempTimeModel from "../models/TempTime.js";
 import TimeSheetModel from "../models/TimeSheets.js";
 import axios from 'axios';
 import { deleteFilesFromS3 } from "../config/S3functions.js";
+import { sendAdminAccessStatusEmail } from "../services/emailService.js"; 
+import { createNotification } from "./notificationController.js"; 
 
 // Approve admin access
 
@@ -214,7 +216,6 @@ export const deleteUserRequestHandler = async (req, res) => {
 
 
 // Admin Access Handler
-
 export const adminAccessHandler = async (req, res) => {
     try {
         const { requestID, decision, adminID } = req.body;
@@ -223,39 +224,39 @@ export const adminAccessHandler = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid input." });
         }
 
-        // Check if the approving user is an admin
         const adminUser = await UserModel.findById(adminID);
         if (!adminUser || !adminUser.adminAccess) {
             return res.status(403).json({ success: false, message: "Unauthorized: Only admins can approve/reject requests." });
         }
 
-        // Fetch the request
         const request = await RequestModel.findById(requestID);
-        if (!request) {
-            return res.status(404).json({ success: false, message: "Request not found." });
+        if (!request || request.reqType !== "ADMIN_ACCESS") {
+            return res.status(400).json({ success: false, message: "Invalid or missing request." });
         }
 
-        // Ensure it is an ADMIN_ACCESS request
-        if (request.reqType !== "ADMIN_ACCESS") {
-            return res.status(400).json({ success: false, message: "Invalid request type." });
+        const { userID } = request;
+        const user = await UserModel.findById(userID);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
         }
-
-        const { userID } = request; // Extract userID from the request document
 
         if (decision === 'APPROVED') {
-            // Update user collection to grant admin access
-            const user = await UserModel.findByIdAndUpdate(
-                userID,
-                { adminAccess: true },
-                { new: true }
-            );
-            
-            if (!user) {
-                return res.status(404).json({ success: false, message: "User not found." });
-            }
+            user.adminAccess = true;
+            await UserModel.updateOne({ _id: user._id }, { adminAccess: true });
         }
-        
-        // Remove the request from the Request collection
+
+        await createNotification({
+            user_id: userID,
+            type: "AdminAccess",
+            message: `Your request for admin access has been ${decision.toLowerCase()}.`,
+            entity_id: requestID,
+            metadata: {
+                status: decision,
+                decidedBy: adminUser.name,
+            },
+        });
+
+        await sendAdminAccessStatusEmail(user, decision, adminUser.name);
         await RequestModel.findByIdAndDelete(requestID);
 
         return res.status(200).json({
@@ -266,6 +267,8 @@ export const adminAccessHandler = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
 
 
 //new api created for the fetching necessary data
