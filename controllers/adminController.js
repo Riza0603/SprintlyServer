@@ -132,14 +132,57 @@ export const getProjectCounts = async (req, res) => {
       pstatus: "In-Progress",
     });
     const completedProjectsCount = await ProjectModel.countDocuments({
-      pstatus: "completed",
+      pstatus: "Completed",
     });
+    const totalUsersCount = await UserModel.countDocuments();
+    const result = await ProjectModel.aggregate([
+      {
+        $project: {
+          membersArray: { $objectToArray: "$members" }
+        }
+      },
+      {
+        $unwind: "$membersArray"
+      },
+      {
+        $match: {
+          "membersArray.v.position": "Project Manager"
+        }
+      },
+      {
+        $group: {
+          _id: "$membersArray.k" // Group by the member's ObjectId string
+        }
+      },
+      {
+        $count: "uniqueManagers"
+      }
+    ]);
+    
+    const uniqueManagerCount = result[0]?.uniqueManagers || 0;
+    const admins = await UserModel.countDocuments({
+      adminAccess: true,
+    });   
+    const adReqCount = await RequestModel.countDocuments({
+      reqType: "ADMIN_ACCESS" ,
+    });  
 
+    const totalReqCount = await RequestModel.countDocuments();
+
+    const projDelReqCount = await RequestModel.countDocuments({
+      reqType: "PROJECT_DELETION",
+    });
     // Send the counts as JSON response
     res.status(200).json({
       totalProjectsCount,
       ongoingProjectsCount,
       completedProjectsCount,
+      totalUsersCount,
+      uniqueManagerCount,
+      admins,
+      adReqCount,
+      projDelReqCount,
+      totalReqCount,
     });
   } catch (err) {
     res
