@@ -38,7 +38,7 @@ export const sendProjectAdditionEmail = async (
                 Click the button below to access the project dashboard and get started:
               </p>
     
-              <a href="http://http://localhost:5173/dashboard"
+              <a href="http://localhost:5173/dashboard"
                 style="display: inline-block; padding: 15px 25px; font-size: 16px; font-weight: bold; color: #fff; 
                        background: #2563eb; border-radius: 8px; text-decoration: none; margin: 20px 0;">
                 View Project

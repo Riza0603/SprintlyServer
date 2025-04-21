@@ -148,7 +148,7 @@ export const deleteProjectRequestHandler = async (req, res) => {
           }
         });
         
-        await sendProjectDeletionStatusEmail(user,decision,adminUser.name); 
+        await sendProjectDeletionStatusEmail(user,decision,adminUser.name,projectName); 
         await RequestModel.findByIdAndDelete(requestID);
         return res.status(200).json({ success: true, message: "Project deletion request rejected and removed." });
       }
@@ -178,7 +178,7 @@ export const deleteProjectRequestHandler = async (req, res) => {
           },
         });
 
-        await sendProjectDeletionStatusEmail(user, decision, adminUser.name);
+        await sendProjectDeletionStatusEmail(user, decision, adminUser.name,projectName);
         // Log memberIDs to verify the IDs before notifying
         const memberIDs = project.members ? Array.from(project.members.keys()) : [];
         //console.log("project.members structure:", project.members);

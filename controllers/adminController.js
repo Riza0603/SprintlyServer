@@ -329,17 +329,12 @@ export const getadminProjectDetails = async (req, res) => {
 
         const total = noProgress + inProgress + completed;
 
-        const completionPercentage =
-          total > 0
-            ? Math.round(
-                (noProgress * 0 + inProgress * 50 + completed * 100) / total
-              )
-            : 0;
+        const completionPercentage = total > 0 ? Math.round((noProgress * 0 + inProgress * 50 + completed * 100) / total): 0;
 
         return {
           projectName: project.pname,
           projectManager: projectManager?.name || "Unknown",
-          totalTeamMembers: Object.keys(project.members || {}).length,
+          totalTeamMembers: project.members?.size || 0,
           totalTasks: total,
           completionPercentage
         };
