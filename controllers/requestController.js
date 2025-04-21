@@ -7,8 +7,7 @@ import TempTimeModel from "../models/TempTime.js";
 import TimeSheetModel from "../models/TimeSheets.js";
 import axios from 'axios';
 import { deleteFilesFromS3 } from "../config/S3functions.js";
-import { sendAdminAccessStatusEmail } from "../services/emailService.js"; 
-import { createNotification } from "./notificationController.js"; 
+import { createNotification } from "./notificationController.js";
 
 // Approve admin access
 
@@ -25,6 +24,82 @@ export const getAllUsers = async (req, res) => {
 
 // project deletion Request Handler
 
+// export const deleteProjectRequestHandler = async (req, res) => {
+//     try {
+//         const { requestID, decision, adminID } = req.body;
+
+//         if (!requestID || !adminID || !['APPROVED', 'REJECTED'].includes(decision)) {
+//             return res.status(400).json({ success: false, message: "Invalid input." });
+//         }
+
+//         // Fetch the request
+//         const request = await RequestModel.findById(requestID);
+//         if (!request) {
+//             return res.status(404).json({ success: false, message: "Request not found." });
+//         }
+
+//         // Ensure it is a PROJECT_DELETION request
+//         if (request.reqType !== "PROJECT_DELETION") {
+//             return res.status(400).json({ success: false, message: "Invalid request type." });
+//         }
+
+//         // Check if the requester is an admin
+//         const adminUser = await UserModel.findById(adminID);
+//         if (!adminUser || !adminUser.adminAccess) {
+//             return res.status(403).json({ success: false, message: "Only admins can approve project deletion." });
+//         }
+
+//         // If request is denied, remove it and return
+//         if (decision === "REJECTED") {
+//             await RequestModel.findByIdAndDelete(requestID);
+//             return res.status(200).json({ success: true, message: "Project deletion request rejected and removed." });
+//         }
+//         else if(decision === "APPROVED"){
+
+//             const projectID= request.projectID;
+//             const myresponse = await axios.delete(`http://localhost:5000/admin/deleteProjectAdmin/${projectID}`);
+//             console.log(myresponse);
+//             const respooseer=myresponse.data;
+//             console.log(myresponse.data.success);
+//             if(myresponse.data.success === true)  {
+//                 return res.status(200).json({success: true, message: "Project deleted successfully"});
+//             } 
+            
+
+//         }
+
+
+//         // // Proceed with project deletion
+//         // const projectID = request.projectID;
+//         // const project = await ProjectModel.findById(projectID);
+//         // if (!project) {
+//         //     return res.status(404).json({ success: false, message: "Project not found." });
+//         // }
+
+//         // const projectName = project.pname;
+
+//         // // Remove references from other collections
+//         // await Promise.all([
+//         //     Notification.deleteMany({ "metadata.projectName": projectName }),
+//         //     RequestModel.deleteMany({ projectID }),
+//         //     TaskModel.deleteMany({ projectName }),
+//         //     TempTimeModel.deleteMany({ projectName }),
+//         //     TimeSheetModel.updateMany({ "timeSheet.projectsHours.projectName": projectName }, { $pull: { "timeSheet.$[].projectsHours": { projectName } } }),
+//         //     UserModel.updateMany({}, { $pull: { projects: projectName } })
+//         // ]);
+
+//         // // Delete project from ProjectModel
+//         // await ProjectModel.findByIdAndDelete(projectID);
+
+//         // // Remove the request itself
+//         // await RequestModel.findByIdAndDelete(requestID);
+
+//         // return res.status(200).json({ success: true, message: "Project deleted successfully and references removed." });
+//     } catch (error) {
+//         return res.status(500).json({ success: false, message: error.message });
+//     }
+// };
+
 export const deleteProjectRequestHandler = async (req, res) => {
     try {
         const { requestID, decision, adminID } = req.body;
@@ -39,63 +114,65 @@ export const deleteProjectRequestHandler = async (req, res) => {
             return res.status(404).json({ success: false, message: "Request not found." });
         }
 
-        // Ensure it is a PROJECT_DELETION request
         if (request.reqType !== "PROJECT_DELETION") {
             return res.status(400).json({ success: false, message: "Invalid request type." });
         }
 
-        // Check if the requester is an admin
         const adminUser = await UserModel.findById(adminID);
         if (!adminUser || !adminUser.adminAccess) {
             return res.status(403).json({ success: false, message: "Only admins can approve project deletion." });
         }
 
-        // If request is denied, remove it and return
+        const { userID, projectID } = request;
+        const user = await UserModel.findById(userID);
+        const project = await ProjectModel.findById(projectID);
+
+        if (!user || !project) {
+            return res.status(404).json({ success: false, message: "User or project not found." });
+        }
+
+        const projectName = project.pname;
+
         if (decision === "REJECTED") {
+            await createNotification({
+                user_id: userID,
+                type: "ProjectDeletion",
+                message: `Your request to delete the project "${projectName}" has been rejected by ${adminUser.name}.`,
+                entity_id: projectID,
+                metadata: {
+                    status: "REJECTED",
+                    projectName,
+                    decidedBy: adminUser.name
+                }
+            });
+
             await RequestModel.findByIdAndDelete(requestID);
             return res.status(200).json({ success: true, message: "Project deletion request rejected and removed." });
         }
-        else if(decision === "APPROVED"){
 
-            const projectID= request.projectID;
-            const myresponse = await axios.delete(`http://localhost:5000/admin/deleteProjectAdmin/${projectID}`);
-            console.log(myresponse);
-            const respooseer=myresponse.data;
-            console.log(myresponse.data.success);
-            if(myresponse.data.success === true)  {
-                return res.status(200).json({success: true, message: "Project deleted successfully"});
-            } 
-            
+        if (decision === "APPROVED") {
+            const response = await axios.delete(`http://localhost:5000/admin/deleteProjectAdmin/${projectID}`);
 
+            if (response.data.success === true) {
+                await createNotification({
+                    user_id: userID,
+                    type: "ProjectDeletion",
+                    message: `Your request to delete the project "${projectName}" has been approved and processed by ${adminUser.name}.`,
+                    entity_id: projectID,
+                    metadata: {
+                        status: "APPROVED",
+                        projectName,
+                        deletedBy: adminUser.name
+                    }
+                });
+
+                await RequestModel.findByIdAndDelete(requestID);
+                return res.status(200).json({ success: true, message: "Project deleted successfully" });
+            } else {
+                return res.status(500).json({ success: false, message: "Project deletion failed at admin route." });
+            }
         }
 
-
-        // // Proceed with project deletion
-        // const projectID = request.projectID;
-        // const project = await ProjectModel.findById(projectID);
-        // if (!project) {
-        //     return res.status(404).json({ success: false, message: "Project not found." });
-        // }
-
-        // const projectName = project.pname;
-
-        // // Remove references from other collections
-        // await Promise.all([
-        //     Notification.deleteMany({ "metadata.projectName": projectName }),
-        //     RequestModel.deleteMany({ projectID }),
-        //     TaskModel.deleteMany({ projectName }),
-        //     TempTimeModel.deleteMany({ projectName }),
-        //     TimeSheetModel.updateMany({ "timeSheet.projectsHours.projectName": projectName }, { $pull: { "timeSheet.$[].projectsHours": { projectName } } }),
-        //     UserModel.updateMany({}, { $pull: { projects: projectName } })
-        // ]);
-
-        // // Delete project from ProjectModel
-        // await ProjectModel.findByIdAndDelete(projectID);
-
-        // // Remove the request itself
-        // await RequestModel.findByIdAndDelete(requestID);
-
-        // return res.status(200).json({ success: true, message: "Project deleted successfully and references removed." });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
@@ -216,6 +293,8 @@ export const deleteUserRequestHandler = async (req, res) => {
 
 
 // Admin Access Handler
+
+// Admin Access Handler
 export const adminAccessHandler = async (req, res) => {
     try {
         const { requestID, decision, adminID } = req.body;
@@ -267,8 +346,6 @@ export const adminAccessHandler = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
-
-
 
 
 //new api created for the fetching necessary data

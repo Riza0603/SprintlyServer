@@ -11,6 +11,6 @@ router.post("/deleteProjectRequest/:projectID",createProjectDeletionRequest);
 router.post("/create_user_deletion_request",createUserDeletionRequest);
 router.post("/adminAccessRequestHandler",adminAccessHandler);
 router.post("/deleteUserRequestHandler",deleteUserRequestHandler);
-router.post("/deleteProjectRequestHandler",deleteProjectRequestHandler);
+router.post("/",deleteProjectRequestHandler);
 
 export default router;
