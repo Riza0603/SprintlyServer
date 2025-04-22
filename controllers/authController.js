@@ -242,18 +242,6 @@ export const getUser = async (req, res) => {
 };
 
 
-export const getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find().select("name email experience role reportTo projects");
-    console.log("Fetched users:", users); // Log the fetched users
-    res.json({ success: true, users });
-  } catch (error) {
-    console.error("Error fetching users:", error); // Log the error
-    handleErrors(error, res);
-  }
-};
-
-
 //update the user details
 export const updateUser = async (req, res) => {
   try {
@@ -319,7 +307,7 @@ export const getUsers = async (req, res) => {
     res.status(200).json({ success: true, users });
   } catch (err) {
     console.error("Error in getUsers:", err.message);
-    handleErrors(err, res);
+    handleErrors(error, res);
   }
 };
 

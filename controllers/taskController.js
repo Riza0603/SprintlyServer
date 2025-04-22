@@ -48,7 +48,7 @@ export const addTask = async (req, res) => {
             type: "Task",
             message: `You have been assigned a new task: "${title}" in project "${project.pname}"`,
             entity_id: task._id,
-            metadata: { priority, status, assignedBy: createdBy },
+            metadata: { priority, status, assignedBy: createdBy, startDate, endDate, title, projectName },
           });
         }
       }
@@ -170,14 +170,12 @@ export const updateStatus = async (req, res) => {
     if (status === "Completed") {
       completedOn = new Date();
     }
-
-    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status, completedOn }, { new: true });
-   
-
+    const updatedTask = await TaskModel.findByIdAndUpdate(taskId, { status, completedOn }, { new: true }); 
     if (!updatedTask) {
       return res.status(404).json({ message: "Task not updated" });
     }
 
+    
     res.json({ message: "Task status updated", task: updatedTask });
   } catch (error) {
     console.error("Error updating task:", error);
@@ -383,7 +381,6 @@ export const updateTask = async (req, res) => {
 };
 
 
-
 //update subtask status
 export const updateSubTaskStatus = async (req, res) => {
   try {
@@ -457,6 +454,8 @@ export const updateTaskDates= async (req,res)=>{
     res.status(500).json({message:"Server error in updateTask()",error:error.message})
   }
 }
+
+
 
 
 

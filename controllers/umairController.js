@@ -8,6 +8,7 @@ import TempTimeModel from "../models/TempTime.js";
 import TimeSheetModel from "../models/TimeSheets.js";
 import argon2 from "argon2";
 import { deleteFilesFromS3 } from "../config/S3functions.js";
+import { sendUserDeletedEmail } from "../services/emailService.js";
 
 export const addUser = async (req, res) => {
   try {
@@ -111,10 +112,7 @@ export const deleteUser = async (req, res) => {
 
         // Wait for all file deletions to complete
         await Promise.all(deletePromises);
-        console.log(
-          "all files related to this have been delted",
-          fileUrlsToDelete
-        );
+       
       }
     } catch {
       console.log("error deleteing files");
@@ -148,6 +146,9 @@ export const deleteUser = async (req, res) => {
     // Delete user from UserModel
     await UserModel.findByIdAndDelete(userID);
 
+    //Email to user
+    await sendUserDeletedEmail(userExists);
+    
     // Remove the request itself
     await RequestModel.deleteMany({ targetUserID: userID });
 
@@ -211,7 +212,6 @@ export const getAllUsers = async (req, res) => {
     const users = await User.find().select(
       "name email experience role reportTo projects"
     );
-    console.log("Fetched users:", users); // Log the fetched users
     res.json({ success: true, users });
   } catch (error) {
     console.error("Error fetching users:", error); // Log the error
