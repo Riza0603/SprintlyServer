@@ -180,7 +180,7 @@ export const updateProjectDeletedFile = async (req, res) => {
   }
 };
 
-//aws updateProject
+
 export const updateProject = async (req, res) => {
   try {
     const { projectId } = req.params;
@@ -753,6 +753,34 @@ export const projectEngagementRate = async (req, res) => {
   }
 };
 
+export const updateProjectStatus= async (req,res)=>{
+  try{
+    const {projectName}=req.params;
+    
+    const Tasks= await TaskModel.find({projectName});
+    
+    const totalTasks= Tasks.length;
+    const completedTasks=Tasks.filter(task=>task.status==="Completed").length;
+    const delayedTasks=Tasks.filter(task=>task.endDate< new Date() && task.status!=="Completed").length;
+ 
+    const delayPercentage= delayedTasks/totalTasks*100;
+    if(totalTasks===completedTasks && totalTasks!=0 ){
+     
+      await ProjectModel.findOneAndUpdate({pname:projectName},{pstatus:"Completed"},{new:true});
+      
+    }else if(delayPercentage>=75){
+      await ProjectModel.findOneAndUpdate({pname:projectName},{pstatus:"Delayed"},{new:true});
+      
+    }else{
+      await ProjectModel.findOneAndUpdate({pname:projectName},{pstatus:"In-Progress"},{new:true});
+    }
+    res.status(200).json({message:"Project status updated "})
+  
+  }catch(error){
+    res.status(500).json({message:"Server error in updateProjectStatus()",error:error.message})
+
+  }
+}
 //Update Project admin
 export const updateProjects = async (req, res) => {
   try {

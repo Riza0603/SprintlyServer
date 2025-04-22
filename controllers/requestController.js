@@ -9,7 +9,7 @@ import axios from 'axios';
 import { deleteFilesFromS3 } from "../config/S3functions.js";
 import { createNotification } from "./notificationController.js";
 import mongoose from "mongoose";
-import { sendProjectDeletionStatusEmail, sendProjectDeletionEmail} from "../services/emailService.js";
+import { sendAdminAccessStatusEmail, sendProjectDeletionStatusEmail, sendProjectDeletionEmail, sendUserDeletedEmail} from "../services/emailService.js";
 // Approve admin access
 
 export const getAllUsers = async (req, res) => { 
@@ -148,7 +148,7 @@ export const deleteProjectRequestHandler = async (req, res) => {
           }
         });
         
-        await sendProjectDeletionStatusEmail(user,decision,adminUser.name); 
+        await sendProjectDeletionStatusEmail(user,decision,adminUser.name,projectName); 
         await RequestModel.findByIdAndDelete(requestID);
         return res.status(200).json({ success: true, message: "Project deletion request rejected and removed." });
       }
@@ -178,7 +178,7 @@ export const deleteProjectRequestHandler = async (req, res) => {
           },
         });
 
-        await sendProjectDeletionStatusEmail(user, decision, adminUser.name);
+        await sendProjectDeletionStatusEmail(user, decision, adminUser.name,projectName);
         // Log memberIDs to verify the IDs before notifying
         const memberIDs = project.members ? Array.from(project.members.keys()) : [];
         //console.log("project.members structure:", project.members);
@@ -289,7 +289,6 @@ export const deleteUserRequestHandler = async (req, res) => {
                 { "comments.userId": userID }
             ]
         });
-                console.log("tasks:",tasks);
     tasks.forEach((task) => {
       task.comments.forEach((comment) => {
         if (comment.attachments?.length) {
@@ -297,14 +296,12 @@ export const deleteUserRequestHandler = async (req, res) => {
         }
       });
     });
-    console.log("files: ", fileUrlsToDelete);
     try{
         // First, delete the files from S3
         if (fileUrlsToDelete.length > 0) {
           const fileNamesArray = fileUrlsToDelete.map((url) =>
             Array.isArray(url) ? url : [url]  // Wrap each url in an array if it's not already an array
           );
-          console.log("ayein:",fileNamesArray);
     
           const deletePromises = fileNamesArray.map((fileUrl) =>
     
@@ -313,7 +310,6 @@ export const deleteUserRequestHandler = async (req, res) => {
     
           // Wait for all file deletions to complete
           await Promise.all(deletePromises);
-          console.log("all files related to this have been delted",fileUrlsToDelete);
         }
       }
       catch {console.log("error deleteing files");
@@ -341,6 +337,9 @@ export const deleteUserRequestHandler = async (req, res) => {
 
         // Delete user from UserModel
         await UserModel.findByIdAndDelete(userID);
+
+        // Send email before deletion
+        await sendUserDeletedEmail(userExists);
 
         // Remove the request itself
         await RequestModel.findByIdAndDelete(requestID);
@@ -556,7 +555,6 @@ export const createProjectDeletionRequest = async (req, res) => {
 
         const {projectID } =  req.params;
         const { userID, reason } = req.body;
-        console.log(projectID, userID, reason);
         if (!userID || !projectID || !reason) {
             return res.status(400).json({ success: false, message: "User ID and Project ID are required" });
         }
