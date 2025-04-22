@@ -293,3 +293,72 @@ export const sendEmail = async (email, subject, content, type) => {
     return false;
   }
 };
+
+
+export const sendProjectDeletionStatusEmail = async (user, status, decidedBy, projectName) => {
+  if (!user.email) return;
+
+  const isRejected = status === "REJECTED";
+  const subject = `Your project deletion request has been ${isRejected ? "rejected" : "approved"}`;
+  const statusColor = isRejected ? "#d32f2f" : "#388e3c";
+  const statusText = isRejected ? "rejected" : "approved";
+
+  await transporter.sendMail({
+    from: "sprintlyganglia@gmail.com",
+    to: user.email,
+    subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
+        <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+          <h2 style="color: ${statusColor};">Project Deletion ${statusText.charAt(0).toUpperCase() + statusText.slice(1)}</h2>
+          <p style="color: #555; font-size: 16px;">
+            Hello ${user.name}, your request to delete the project <strong>"${projectName}"</strong> has been 
+            <strong style="color: ${statusColor};">${statusText}</strong> by 
+            <strong style="color: #2563eb;">${decidedBy}</strong>.
+          </p>
+          <p style="color: #555; font-size: 14px;">
+            ${isRejected 
+              ? "If you have questions about this decision, please reach out to your administrator." 
+              : "This project and its data have now been successfully removed from the system."}
+          </p>
+          <footer style="margin-top: 20px; font-size: 12px; color: #888;">
+            <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+          </footer>
+        </div>
+      </div>
+    `,
+  });
+};
+
+
+export const sendProjectDeletionEmail = async (user, deletedBy, projectName) => {
+  if (!user.email) return;
+
+  const subject = `Project "${projectName}" has been deleted`;
+
+  await transporter.sendMail({
+    from: "sprintlyganglia@gmail.com",
+    to: user.email,
+    subject,
+    html: `
+      <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
+        <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+          <h2 style="color: #d32f2f;">Project Deleted</h2>
+          <p style="color: #555; font-size: 16px;">
+            Hello ${user.name}, the project <strong style="color: #111;">"${projectName}"</strong> that you were part of has been 
+            <strong style="color: #d32f2f;">deleted</strong> by 
+            <strong style="color: #2563eb;">${deletedBy}</strong>.
+          </p>
+          <p style="color: #555; font-size: 14px;">
+            If you have any questions or need further details, feel free to reach out to your team lead or admin.
+          </p>
+          <footer style="margin-top: 20px; font-size: 12px; color: #888;">
+            <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+          </footer>
+        </div>
+      </div>
+    `,
+  });
+};

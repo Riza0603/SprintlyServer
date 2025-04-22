@@ -2,13 +2,11 @@ import NotificationModel from "../models/Notification.js";
 
 export const createNotification = async ({ user_id, type, message, entity_id, metadata = {} }) => {
   try {
-    // Validate required fields
     if (!user_id || !type || !message || !entity_id) {
       console.warn("Missing required fields for notification:", { user_id, type, message, entity_id });
       return;
     }
 
-    // Create and save the notification
     const notification = new NotificationModel({
       user_id,
       type,
@@ -19,10 +17,10 @@ export const createNotification = async ({ user_id, type, message, entity_id, me
       created_at: new Date(),
     });
 
-    await notification.save();
-    //console.log("Notification created successfully:", notification);
+    return await notification.save(); 
   } catch (error) {
     console.error("Error creating notification:", error);
+    throw error; // optional but helpful for debugging in caller
   }
 };
 
