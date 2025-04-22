@@ -6,7 +6,6 @@ import authRoutes from "./routes/authRoutes.js";
 import projectRoute from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";    
 import uploadRoutes from "./routes/uploadRoutes.js";
-import umairRoutes from "./routes/umairRoutes.js";
 import tempTimeRoutes from "./routes/tempTimeRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js"
@@ -29,7 +28,6 @@ app.use("/api", projectRoute);
 app.use("/api", taskRoutes);
 app.use("/api",authRoutes);
 app.use("/api", uploadRoutes);
-app.use("/umair",umairRoutes);
 
 app.use("/api",tempTimeRoutes)
 app.use("/api",notificationRoutes)

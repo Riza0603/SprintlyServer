@@ -245,9 +245,21 @@ export const getUser = async (req, res) => {
 //update the user details
 export const updateUser = async (req, res) => {
   try {
-    const { _id, email, name, experience, role, reportTo } = req.body;
+    const { _id, email, name, experience, role,phone, projects, reportTo } = req.body;
 
-    const user = await User.findOneAndUpdate({ _id: _id }, { name, email, experience, role, reportTo }, { new: true });
+    const user = await User.findByIdAndUpdate(
+      _id,
+      {
+        name,
+        email,
+        phone,
+        role,
+        experience,
+        reportTo,
+        projects,
+      },
+      { new: true }
+    );
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
@@ -307,7 +319,7 @@ export const getUsers = async (req, res) => {
     res.status(200).json({ success: true, users });
   } catch (err) {
     console.error("Error in getUsers:", err.message);
-    handleErrors(error, res);
+    handleErrors(err, res);
   }
 };
 

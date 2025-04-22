@@ -10,98 +10,9 @@ import { deleteFilesFromS3 } from "../config/S3functions.js";
 import { createNotification } from "./notificationController.js";
 import mongoose from "mongoose";
 import { sendAdminAccessStatusEmail, sendProjectDeletionStatusEmail, sendProjectDeletionEmail, sendUserDeletedEmail} from "../services/emailService.js";
-// Approve admin access
-
-export const getAllUsers = async (req, res) => { 
-  try {
-    const users = await UserModel.find({}, "-password -__v"); // Exclude passwords for security
-    const userCount = users.length;
-    res.status(200).json({ success: true, users, userCount });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Error fetching users", error: error.message });
-  }
-};
 
 
-// project deletion Request Handler
 
-// export const deleteProjectRequestHandler = async (req, res) => {
-//     try {
-//         const { requestID, decision, adminID } = req.body;
-
-//         if (!requestID || !adminID || !['APPROVED', 'REJECTED'].includes(decision)) {
-//             return res.status(400).json({ success: false, message: "Invalid input." });
-//         }
-
-//         // Fetch the request
-//         const request = await RequestModel.findById(requestID);
-//         if (!request) {
-//             return res.status(404).json({ success: false, message: "Request not found." });
-//         }
-
-//         // Ensure it is a PROJECT_DELETION request
-//         if (request.reqType !== "PROJECT_DELETION") {
-//             return res.status(400).json({ success: false, message: "Invalid request type." });
-//         }
-
-//         // Check if the requester is an admin
-//         const adminUser = await UserModel.findById(adminID);
-//         if (!adminUser || !adminUser.adminAccess) {
-//             return res.status(403).json({ success: false, message: "Only admins can approve project deletion." });
-//         }
-
-//         // If request is denied, remove it and return
-//         if (decision === "REJECTED") {
-//             await RequestModel.findByIdAndDelete(requestID);
-//             return res.status(200).json({ success: true, message: "Project deletion request rejected and removed." });
-//         }
-//         else if(decision === "APPROVED"){
-
-//             const projectID= request.projectID;
-//             const myresponse = await axios.delete(`http://localhost:5000/admin/deleteProjectAdmin/${projectID}`);
-//             console.log(myresponse);
-//             const respooseer=myresponse.data;
-//             console.log(myresponse.data.success);
-//             if(myresponse.data.success === true)  {
-//                 return res.status(200).json({success: true, message: "Project deleted successfully"});
-//             } 
-            
-
-//         }
-
-
-//         // // Proceed with project deletion
-//         // const projectID = request.projectID;
-//         // const project = await ProjectModel.findById(projectID);
-//         // if (!project) {
-//         //     return res.status(404).json({ success: false, message: "Project not found." });
-//         // }
-
-//         // const projectName = project.pname;
-
-//         // // Remove references from other collections
-//         // await Promise.all([
-//         //     Notification.deleteMany({ "metadata.projectName": projectName }),
-//         //     RequestModel.deleteMany({ projectID }),
-//         //     TaskModel.deleteMany({ projectName }),
-//         //     TempTimeModel.deleteMany({ projectName }),
-//         //     TimeSheetModel.updateMany({ "timeSheet.projectsHours.projectName": projectName }, { $pull: { "timeSheet.$[].projectsHours": { projectName } } }),
-//         //     UserModel.updateMany({}, { $pull: { projects: projectName } })
-//         // ]);
-
-//         // // Delete project from ProjectModel
-//         // await ProjectModel.findByIdAndDelete(projectID);
-
-//         // // Remove the request itself
-//         // await RequestModel.findByIdAndDelete(requestID);
-
-//         // return res.status(200).json({ success: true, message: "Project deleted successfully and references removed." });
-//     } catch (error) {
-//         return res.status(500).json({ success: false, message: error.message });
-//     }
-// };
-
-//withNotification
 export const deleteProjectRequestHandler = async (req, res) => {
     try {
       const { requestID, decision, adminID } = req.body;
@@ -465,40 +376,40 @@ export const createAdminAccessRequest = async (req, res) => {
 };
 
 
-// creating a user addition request
+// // creating a user addition request
 
-export const createUserAdditionRequest = async (req, res) => {
-    try {
-        const { userID, reason } = req.body;  // Extract reason from request body
+// export const createUserAdditionRequest = async (req, res) => {
+//     try {
+//         const { userID, reason } = req.body;  // Extract reason from request body
 
-        if (!userID) {
-            return res.status(400).json({ success: false, message: "User ID is required" });
-        }
+//         if (!userID) {
+//             return res.status(400).json({ success: false, message: "User ID is required" });
+//         }
 
-        // Validate if userID is a registered user
-        const userExists = await UserModel.findById(userID);
-        if (!userExists) {
-            return res.status(404).json({ success: false, message: "User not found" });
-        } 
+//         // Validate if userID is a registered user
+//         const userExists = await UserModel.findById(userID);
+//         if (!userExists) {
+//             return res.status(404).json({ success: false, message: "User not found" });
+//         } 
 
-        // Creating a new request with reason
-        const newRequest = new RequestModel({
-            userID,
-            reqType: "USER_ADDITION",
-            reason: reason   // Assign reason properly
-        });
+//         // Creating a new request with reason
+//         const newRequest = new RequestModel({
+//             userID,
+//             reqType: "USER_ADDITION",
+//             reason: reason   // Assign reason properly
+//         });
 
-        await newRequest.save();
+//         await newRequest.save();
 
-        return res.status(201).json({
-            success: true,
-            message: "User addition request submitted successfully",
-            request: newRequest
-        });
-    } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
-    }
-};
+//         return res.status(201).json({
+//             success: true,
+//             message: "User addition request submitted successfully",
+//             request: newRequest
+//         });
+//     } catch (error) {
+//         return res.status(500).json({ success: false, message: error.message });
+//     }
+// };
 
 
 //Create a User Deletion Request
