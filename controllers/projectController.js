@@ -781,6 +781,7 @@ export const updateProjectStatus= async (req,res)=>{
 
   }
 }
+
 //Update Project admin
 export const updateProjects = async (req, res) => {
   try {
@@ -835,13 +836,7 @@ export const updateProjects = async (req, res) => {
           position: "Project Manager"
         };
       }
-
       updateData.members = formattedMembers;
-    }
-
-    // Handle attachments update correctly
-    if (Array.isArray(updateData.pAttachments)) {
-      updateData.pAttachments = { $each: updateData.pAttachments };
     }
 
     // Perform the update (ONLY ONCE)
@@ -860,21 +855,12 @@ export const updateProjects = async (req, res) => {
       ? Array.from(updatedProject.members.keys())
       : Object.keys(updatedProject.members || {});
 
-    //console.log("Old Members:", oldMembersList);
-    //console.log("Updated Members:", updatedMembersList);
-
     // Identify removed and added members
     const removedMembers = oldMembersList.filter(member => !updatedMembersList.includes(member));
     const validRemovedMembers = removedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
 
     const addedMembers = updatedMembersList.filter(member => !oldMembersList.includes(member));
     const validAddedMembers = addedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
-
-    //console.log("Old Members:", oldMembersList);
-    //console.log("Updated Members:", updatedMembersList);
-    //console.log("Removed Members:", removedMembers);
-    //console.log("Valid Removed Members:", validRemovedMembers);
-    //console.log("Valid Added Members:", validAddedMembers);
 
     // Remove project name from `registers` for removed members
     if (validRemovedMembers.length > 0) {
