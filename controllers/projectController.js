@@ -639,7 +639,7 @@ export const scheduleVariance = async (req, res) => {
     const plannedCompletion = Math.min((daysPassed / totalProjectDuration) * 100, 100);
     const actualCompletion = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
     const scheduleVariance = actualCompletion - plannedCompletion;
-
+    console.log("Schedule Variance:", scheduleVariance);
     res.json({ projectName, totalTasks, completedTasks, plannedCompletion, actualCompletion, scheduleVariance });
 
   } catch (error) {
