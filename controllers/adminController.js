@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import TaskModel from "../models/Tasks.js";
 import ProjectModel from "../models/Projects.js";
-import UserModel from "../models/User.js"; // Adjust the path as needed
+import UserModel from "../models/User.js"; 
 import Notification from "../models/Notification.js";
 import RequestModel from "../models/Requests.js";
 import TempTimeModel from "../models/TempTime.js";
@@ -131,14 +131,57 @@ export const getProjectCounts = async (req, res) => {
       pstatus: "In-Progress",
     });
     const completedProjectsCount = await ProjectModel.countDocuments({
-      pstatus: "completed",
+      pstatus: "Completed",
     });
+    const totalUsersCount = await UserModel.countDocuments();
+    const result = await ProjectModel.aggregate([
+      {
+        $project: {
+          membersArray: { $objectToArray: "$members" }
+        }
+      },
+      {
+        $unwind: "$membersArray"
+      },
+      {
+        $match: {
+          "membersArray.v.position": "Project Manager"
+        }
+      },
+      {
+        $group: {
+          _id: "$membersArray.k" // Group by the member's ObjectId string
+        }
+      },
+      {
+        $count: "uniqueManagers"
+      }
+    ]);
+    
+    const uniqueManagerCount = result[0]?.uniqueManagers || 0;
+    const admins = await UserModel.countDocuments({
+      adminAccess: true,
+    });   
+    const adReqCount = await RequestModel.countDocuments({
+      reqType: "ADMIN_ACCESS" ,
+    });  
 
+    const totalReqCount = await RequestModel.countDocuments();
+
+    const projDelReqCount = await RequestModel.countDocuments({
+      reqType: "PROJECT_DELETION",
+    });
     // Send the counts as JSON response
     res.status(200).json({
       totalProjectsCount,
       ongoingProjectsCount,
       completedProjectsCount,
+      totalUsersCount,
+      uniqueManagerCount,
+      admins,
+      adReqCount,
+      projDelReqCount,
+      totalReqCount,
     });
   } catch (err) {
     res
@@ -252,3 +295,61 @@ export const getUnassignedUsers = async (req, res) => {
     });
   }
 };
+
+// Fetching all projects with their details for admin dashboard
+export const getadminProjectDetails = async (req, res) => {
+  try {
+    const projects = await ProjectModel.find();
+
+    const kpiData = await Promise.all(
+      projects.map(async (project) => {
+        const managerId = project.projectCreatedBy;
+        const projectManager = await UserModel.findById(managerId);
+
+        const statusData = await TaskModel.aggregate([
+          { $match: { projectName: project.pname } },
+          {
+            $group: {
+              _id: "$status",
+              count: { $sum: 1 }
+            }
+          }
+        ]);
+
+        let noProgress = 0,
+          inProgress = 0,
+          completed = 0;
+
+        statusData.forEach((s) => {
+          if (s._id === "No Progress") noProgress = s.count;
+          else if (s._id === "In-Progress") inProgress = s.count;
+          else if (s._id === "Completed") completed = s.count;
+        });
+
+        const total = noProgress + inProgress + completed;
+
+        const completionPercentage =
+          total > 0
+            ? Math.round(
+                (noProgress * 0 + inProgress * 50 + completed * 100) / total
+              )
+            : 0;
+
+        return {
+          projectName: project.pname,
+          projectManager: projectManager?.name || "Unknown",
+          totalTeamMembers: Object.keys(project.members || {}).length,
+          totalTasks: total,
+          completionPercentage
+        };
+      })
+    );
+
+    res.json(kpiData);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+};
+
+
