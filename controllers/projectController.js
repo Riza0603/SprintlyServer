@@ -1,11 +1,12 @@
+import mongoose from "mongoose";
 import ProjectModel from "../models/Projects.js";
 import TaskModel from "../models/Tasks.js";
-import UserModel from "../models/User.js";
-import TimeSheetModel from "../models/TimeSheets.js";
 import TempTimeModel from "../models/TempTime.js";
+import TimeSheetModel from "../models/TimeSheets.js";
+import UserModel from "../models/User.js";
+import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/emailService.js";
 import { createNotification } from "./notificationController.js";
-import mongoose from "mongoose";
-import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/emailService.js";;
+;
 
 //create a new project
 export const createProject = async (req, res) => {
@@ -92,8 +93,27 @@ export const createProject = async (req, res) => {
 //fetches projects
 export const fetchProjects = async (req, res) => {
   try {
-    const projects = await ProjectModel.find();
-    res.status(200).json(projects);
+    const projects = await ProjectModel.find().lean();
+    const populatedProjects = await Promise.all(
+      projects.map(async (project) => {
+        const memberEntries = Object.entries(project.members);
+        const managerEntry = memberEntries.find(
+          ([, details]) => details.position === "Project Manager"
+        );
+        let managerName = "Not Assigned";
+        if (managerEntry) {
+          const [managerId] = managerEntry;
+          const user = await UserModel.findById(managerId).lean();
+          managerName = user ? user.name : "Unknown User";
+        }
+        return {
+          ...project,
+          pmanager: managerName,
+        };
+      })
+    );
+
+    res.status(200).json(populatedProjects);
   } catch (err) {
     console.error("Error in fetchProjects:", err.message);
     res.status(500).json({ message: err.message });
