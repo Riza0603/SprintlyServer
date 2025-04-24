@@ -198,29 +198,40 @@ export const generateReport = async (req, res) => {
       underline: true,
     }).moveDown(0.5);
 
-    // Calculate workload percentages
-    const memberWorkload = {};
+    // Calculate weighted workload scores
+    const memberScores = {};
+    let totalWeightedTasks = 0;
+
     tasks.forEach((task) => {
-      if (task.assignee) {
-        memberWorkload[task.assignee] = (memberWorkload[task.assignee] || 0) + 1;
+      if (task.assigneeId) {
+        const weight = task.priority === "High" ? 3 : task.priority === "Medium" ? 2 : 1;
+        memberScores[task.assigneeId] = (memberScores[task.assigneeId] || 0) + weight;
+        totalWeightedTasks += weight;
       }
     });
-    const totalTasks = tasks.length;
-    const members = Object.keys(memberWorkload);
-    const workloadPercentage = members.map(
-      (member) => Math.round((memberWorkload[member] / totalTasks) * 100)
-    );
 
-    // Draw Progress Bars for Each Member
-    members.forEach((member, index) => {
-      ensureSpace(40); 
-      const workload = workloadPercentage[index] || 0;
-      doc.fontSize(12).fillColor("black").text(`${member}: ${workload}%`, 50, doc.y + 9);
+    // Get member names from UserModel
+    const memberId = Object.keys(memberScores);
+    const userMap = {};
+    const user = await UserModel.find({ _id: { $in: memberId } }).select("name");
+    users.forEach(user => {
+      userMap[user._id.toString()] = user.name;
+    });
+
+    // Calculate percentage and draw bars
+    memberId.forEach((id) => {
+      ensureSpace(40);
+      const name = userMap[id] || "Unknown";
+      const score = memberScores[id];
+      const percent = totalWeightedTasks > 0 ? Math.round((score / totalWeightedTasks) * 100) : 0;
+
+      doc.fontSize(12).fillColor("black").text(`${name}: ${percent}%`, 50, doc.y + 9);
 
       const barWidth = 300;
       doc.roundedRect(50, doc.y + 5, barWidth, 10, 3).fill("#E0E0E0").stroke();
-      doc.roundedRect(50, doc.y + 5, (workload / 100) * barWidth, 10, 3).fill("#3498db").stroke().moveDown(1);
+      doc.roundedRect(50, doc.y + 5, (percent / 100) * barWidth, 10, 3).fill("#3498db").stroke().moveDown(1);
     });
+
 
     await downloadPieChartImage(progress);
 
