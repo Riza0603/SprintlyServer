@@ -9,7 +9,7 @@ import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/e
 
 //create a new project
 export const createProject = async (req, res) => {
-  const { pname, pdescription, projectCreatedBy, pstart, pend, members } = req.body;
+  const { pname, pdescription, projectCreatedBy, pstart, pend, members,budget } = req.body;
 
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
@@ -40,7 +40,7 @@ export const createProject = async (req, res) => {
      };
    });
 
-    const project = await ProjectModel.create({ pname, pdescription, projectCreatedBy, pstart, pend, members: membersMap });
+    const project = await ProjectModel.create({ pname, pdescription, projectCreatedBy, pstart, pend,budget, members: membersMap });
 
     const users = await Promise.all(
       members.map(async (memberId) => {
