@@ -16,12 +16,23 @@ const __dirname = path.dirname(__filename);
 export const generateReport = async (req, res) => {
   try {
     const { projectName } = req.params;
+    const {startDate, endDate} = req.body;
 
     const project= await ProjectModel.findOne({pname:projectName});
 
     if (!project) return res.status(404).json({ error: "Project not found" });
 
-    const tasks = await TaskModel.find({ projectName: project.pname });
+    const query = { projectName: project.pname };
+
+    if (startDate && endDate) {
+      query.startDate = {
+        $gte: startDate,
+        $lte: endDate
+      };
+    }
+    
+    const tasks = await TaskModel.find(query);
+    
 
     const completedTasks = tasks.filter((t) => t.status === "Completed").length;
     const inProgressTasks = tasks.filter((t) => t.status === "In-Progress").length;
@@ -76,7 +87,6 @@ export const generateReport = async (req, res) => {
     doc.text(`Description: ${project.pdescription}`).moveDown(0.2);
     doc.text(`Start Date: ${project.pstart ? moment(project.pstart).format("MMM DD, YYYY") : "N/A"}`).moveDown(0.2);
     doc.text(`End Date: ${project.pend ? moment(project.pend).format("MMM DD, YYYY") : "N/A"}`).moveDown(1);
-    console.log("ssa")
 
     if (!project || !project.pstart) {
       console.log("pstart is undefined or project not found");
@@ -140,50 +150,67 @@ export const generateReport = async (req, res) => {
     }
 
     let y = doc.y;
-    drawTableHeader(y);
-    y += rowHeight;
 
-    doc.fillColor("black").fontSize(10);
+drawTableHeader(y);
+y += rowHeight;
 
-    for (let i = 0; i < tasks.length; i++) {
-      const task = tasks[i];
-      const titleHeight = doc.heightOfString(task.title || "", { width: colWidths[0] - 5 });
-      const rowHeightDynamic = Math.max(rowHeight, titleHeight + 10);
+if (tasks.length === 0) {
+  // Draw row border (like other rows)
+  const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+  doc.rect(50, y, totalWidth, rowHeight).stroke();
 
-      if (y + rowHeightDynamic > pageHeight) {
-        doc.addPage();
-        y = doc.page.margins.top;
-        drawTableHeader(y);
-        y += rowHeight;
-        i--;
-        continue;
-      }
+  // Draw centered text inside the row
+  doc.fontSize(10)
+     .fillColor("gray")
+     .text("No tasks to display", 50, y + 5, {
+       width: totalWidth,
+       align: "center"
+     });
 
-      if (task && typeof task === "object") {
-        // Draw border for the row
-        doc.rect(50, y, colWidths.reduce((a, b) => a + b, 0), rowHeightDynamic).stroke();
+  y += rowHeight; // Move cursor down if needed later
 
-        // Draw cell content
-        doc.text(task.title || "Untitled", 55, y + 5, { width: colWidths[0] - 5, align: "left" });
-        doc.text(task.assignee || "Unknown", 205, y + 5, { width: colWidths[1], align: "center" });
-        doc.text(task.createdBy || "Unknown", 305, y + 5, { width: colWidths[2], align: "center" });
-        doc.text(task.priority || "N/A", 405, y + 5, { width: colWidths[3], align: "center" });
+} else {
+  doc.fillColor("black").fontSize(10);
 
-        const statusColor = task.status === "Completed"
-          ? "#4CAF50"
-          : task.status === "In-Progress"
-          ? "#FFC107"
-          : "#F44336";
+  for (let i = 0; i < tasks.length; i++) {
+    const task = tasks[i];
+    const titleHeight = doc.heightOfString(task.title || "", { width: colWidths[0] - 5 });
+    const rowHeightDynamic = Math.max(rowHeight, titleHeight + 10);
 
-        doc.fillColor(statusColor).text(task.status || "N/A", 485, y + 5, {
-          width: colWidths[4],
-          align: "center"
-        });
-
-        doc.fillColor("black");
-        y += rowHeightDynamic;
-      }
+    if (y + rowHeightDynamic > pageHeight) {
+      doc.addPage();
+      y = doc.page.margins.top;
+      drawTableHeader(y);
+      y += rowHeight;
+      i--;
+      continue;
     }
+
+    if (task && typeof task === "object") {
+      doc.rect(50, y, colWidths.reduce((a, b) => a + b, 0), rowHeightDynamic).stroke();
+
+      doc.text(task.title || "Untitled", 55, y + 5, { width: colWidths[0] - 5, align: "left" });
+      doc.text(task.assignee || "Unknown", 205, y + 5, { width: colWidths[1], align: "center" });
+      doc.text(task.createdBy || "Unknown", 305, y + 5, { width: colWidths[2], align: "center" });
+      doc.text(task.priority || "N/A", 405, y + 5, { width: colWidths[3], align: "center" });
+
+      const statusColor = task.status === "Completed"
+        ? "#4CAF50"
+        : task.status === "In-Progress"
+        ? "#FFC107"
+        : "#F44336";
+
+      doc.fillColor(statusColor).text(task.status || "N/A", 485, y + 5, {
+        width: colWidths[4],
+        align: "center"
+      });
+
+      doc.fillColor("black");
+      y += rowHeightDynamic;
+    }
+  }
+}
+
         
     function ensureSpace(requiredHeight) {
       if (doc.y + requiredHeight > doc.page.height - doc.page.margins.bottom) {
@@ -198,29 +225,40 @@ export const generateReport = async (req, res) => {
       underline: true,
     }).moveDown(0.5);
 
-    // Calculate workload percentages
-    const memberWorkload = {};
+    // Calculate weighted workload scores
+    const memberScores = {};
+    let totalWeightedTasks = 0;
+
     tasks.forEach((task) => {
-      if (task.assignee) {
-        memberWorkload[task.assignee] = (memberWorkload[task.assignee] || 0) + 1;
+      if (task.assigneeId) {
+        const weight = task.priority === "High" ? 3 : task.priority === "Medium" ? 2 : 1;
+        memberScores[task.assigneeId] = (memberScores[task.assigneeId] || 0) + weight;
+        totalWeightedTasks += weight;
       }
     });
-    const totalTasks = tasks.length;
-    const members = Object.keys(memberWorkload);
-    const workloadPercentage = members.map(
-      (member) => Math.round((memberWorkload[member] / totalTasks) * 100)
-    );
 
-    // Draw Progress Bars for Each Member
-    members.forEach((member, index) => {
-      ensureSpace(40); 
-      const workload = workloadPercentage[index] || 0;
-      doc.fontSize(12).fillColor("black").text(`${member}: ${workload}%`, 50, doc.y + 9);
+    // Get member names from UserModel
+    const memberId = Object.keys(memberScores);
+    const userMap = {};
+    const user = await UserModel.find({ _id: { $in: memberId } }).select("name");
+    users.forEach(user => {
+      userMap[user._id.toString()] = user.name;
+    });
+
+    // Calculate percentage and draw bars
+    memberId.forEach((id) => {
+      ensureSpace(40);
+      const name = userMap[id] || "Unknown";
+      const score = memberScores[id];
+      const percent = totalWeightedTasks > 0 ? Math.round((score / totalWeightedTasks) * 100) : 0;
+
+      doc.fontSize(12).fillColor("black").text(`${name}: ${percent}%`, 50, doc.y + 9);
 
       const barWidth = 300;
       doc.roundedRect(50, doc.y + 5, barWidth, 10, 3).fill("#E0E0E0").stroke();
-      doc.roundedRect(50, doc.y + 5, (workload / 100) * barWidth, 10, 3).fill("#3498db").stroke().moveDown(1);
+      doc.roundedRect(50, doc.y + 5, (percent / 100) * barWidth, 10, 3).fill("#3498db").stroke().moveDown(1);
     });
+
 
     await downloadPieChartImage(progress);
 
