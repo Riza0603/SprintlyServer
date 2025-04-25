@@ -83,7 +83,6 @@ export const deleteProjectAdmin = async (req, res) => {
 
     // Now, delete the project from all collections
     await Promise.all([
-      Notification.deleteMany({ "metadata.projectName": projectName }),
       RequestModel.deleteMany({ projectID }),
       TaskModel.deleteMany({ projectName }),
       TempTimeModel.deleteMany({ projectName }),

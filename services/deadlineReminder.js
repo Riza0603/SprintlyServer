@@ -37,7 +37,6 @@ cron.schedule("0 8 * * *", async () => {
         },
       });
 
-      // Send email notification
       const user = await User.findById(task.assigneeId);
       if (user?.email) {
         await sendEmail(

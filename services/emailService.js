@@ -305,7 +305,7 @@ export const sendEmail = async (email, subject, content, type) => {
             <strong>Task:</strong> ${taskName}
           </p>
           <p style="color: #555; font-size: 16px; margin-bottom: 20px;">
-            <strong>Deadline:</strong> ${deadline}
+            <strong>⏳Deadline:</strong> ${deadline}
           </p>
 
           <p style="color: #555; font-size: 14px; margin-top: 10px; text-align: center;">

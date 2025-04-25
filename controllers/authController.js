@@ -245,9 +245,9 @@ export const getUser = async (req, res) => {
 //update the user details
 export const updateUser = async (req, res) => {
   try {
-    const { _id, email, name, experience, role, reportTo } = req.body;
+    const { _id, email, name, experience, role, phone, reportTo } = req.body;
 
-    const user = await User.findOneAndUpdate({ _id: _id }, { name, email, experience, role, reportTo }, { new: true });
+    const user = await User.findOneAndUpdate({ _id: _id }, { name, email, experience, role,phone, reportTo }, { new: true });
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
