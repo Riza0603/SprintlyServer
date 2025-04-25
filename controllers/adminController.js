@@ -332,6 +332,9 @@ export const getadminProjectDetails = async (req, res) => {
 
         return {
           projectName: project.pname,
+          startDate:project.pstart,
+          endDate:project.pend,
+          pstatus:project.pstatus,
           projectManager: projectManager?.name || "Unknown",
           totalTeamMembers: project.members?.size || 0,
           totalTasks: total,
