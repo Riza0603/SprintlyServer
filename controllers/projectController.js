@@ -861,3 +861,15 @@ export const deleteProject = async (req, res) => {
   }
 
 }
+
+//update usedbudget value in project
+export const updateUsedBudget = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { usedBudget } = req.body;
+    const updatedProject = await ProjectModel.findByIdAndUpdate(projectId,{ usedBudget },{ new: true });
+    res.status(200).json(updatedProject );
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
