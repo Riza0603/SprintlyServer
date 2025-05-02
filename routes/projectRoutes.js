@@ -30,7 +30,7 @@ router.post("/updateProjectLink/:projectId", updateProjectLink);
 
 router.post("/getProjectFiles/:projectId",getProjectFiles);
 router.post("/updateProjectStatus/:projectName",updateProjectStatus);//update project status
-router.get("/generate-pdf/:projectName", generateReport);
+router.post("/generate-pdf/:projectName", generateReport);
 router.post("/updateUsedBudget/:projectId",updateUsedBudget);
 
 export default router;
