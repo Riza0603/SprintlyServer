@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-import dotenv from "dotenv";
 import TaskModel from "../models/Tasks.js";
 import ProjectModel from "../models/Projects.js";
 import UserModel from "../models/User.js"; 
@@ -10,24 +9,8 @@ import TempTimeModel from "../models/TempTime.js";
 import TimeSheetModel from "../models/TimeSheets.js";
 import { deleteFilesFromS3 } from "../config/S3functions.js";
 
-dotenv.config();
 
-//Fetch all users - not needed already there in authController.js
-export const getAllUsers = async (req, res) => {
-  try {
-    const users = await UserModel.find({}, "-password"); // Exclude passwords for security
-    res.status(200).json({ success: true, users });
-  } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false, 
-        message: "Error fetching users",
-        error: error.message,
-      });
-  }
-};
-// Fetch all users
+
 export const deleteProjectAdmin = async (req, res) => {
   try {
     const { projectID } = req.params;
@@ -79,10 +62,11 @@ export const deleteProjectAdmin = async (req, res) => {
   catch {console.log("error deleteing files");
     return res
     .status(404)
-    .json({ success: false, message: "fiole sdfsdfn not deltedddddd" });  }
+    .json({ success: false, message: "files not deleted !!!!!" });  }
 
     // Now, delete the project from all collections
     await Promise.all([
+      //Notification.deleteMany({ "metadata.projectName": projectName }),
       RequestModel.deleteMany({ projectID }),
       TaskModel.deleteMany({ projectName }),
       TempTimeModel.deleteMany({ projectName }),
@@ -107,28 +91,14 @@ export const deleteProjectAdmin = async (req, res) => {
 };
 
 
-// Fetching all Projects
-export const getAllProjects = async (req, res) => {
-  try {
-    const projects = await ProjectModel.find();
-    res.status(200).json({ success: true, data: projects });
-  } catch (error) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error fetching projects",
-        error: error.message,
-      });
-  }
-};
+
 
 // Fetching Counts of Ongoing and Completed Projects
 export const getProjectCounts = async (req, res) => {
   try {
     const totalProjectsCount = await ProjectModel.countDocuments();
     const ongoingProjectsCount = await ProjectModel.countDocuments({
-      pstatus: "In-Progress",
+      pstatus:  { $ne: 'Completed' },
     });
     const completedProjectsCount = await ProjectModel.countDocuments({
       pstatus: "Completed",
@@ -190,111 +160,7 @@ export const getProjectCounts = async (req, res) => {
   }
 };
 
-export const getProjectProgress = async (req, res) => {
-  try {
-    const { projectName } = req.body;
 
-    if (!projectName) {
-      return res.status(400).json({ message: "Project name is required" });
-    }
-
-    // Find all tasks related to this project
-    const totalTasks = await TaskModel.countDocuments({ projectName });
-    if (totalTasks === 0) {
-      return res
-        .status(200)
-        .json({
-          message: "No tasks found for this project",
-          progressPercentage: 0,
-        });
-    }
-
-    // Count completed tasks
-    const completedTasks = await TaskModel.countDocuments({
-      projectName,
-      status: "Completed",
-    });
-
-    // Calculate progress percentage
-    const progressPercentage = (completedTasks / totalTasks) * 100;
-
-    res.status(200).json({
-      projectName,
-      totalTasks,
-      completedTasks,
-      progressPercentage: progressPercentage.toFixed(2) + "%",
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Error calculating project progress",
-        error: error.message,
-      });
-  }
-};
-
-// give list of assigned user by project name and unassigned users also
-
-export const getUsersByProject = async (req, res) => {
-  try {
-    const { projectName } = req.body;
-
-    if (!projectName) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Project name is required in the request body",
-        });
-    }
-
-    const assignedUsers = await UserModel.find(
-      { projects: projectName },
-      "-password -__v"
-    ).lean(); //.lean() converts a Mongoose document into a plain JavaScript object.
-    const assignedUserCount = assignedUsers.length;
-
-    res.status(200).json({
-      success: true,
-      data: {
-        projectName,
-        assignedUserCount,
-        assignedUsers,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching users by project",
-      error: error.message,
-    });
-  }
-};
-
-export const getUnassignedUsers = async (req, res) => {
-  try {
-    const unAssignedUsers = await UserModel.find(
-      { projects: { $size: 0 } },
-      "-password -__v"
-    ).lean();
-    const unAssignedUsersCount = unAssignedUsers.length;
-
-    res.status(200).json({
-      success: true,
-      data: {
-        unAssignedUsers,
-        unAssignedUsersCount,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "error finding unassigned user details",
-      error: error.message,
-    });
-  }
-};
 
 // Fetching all projects with their details for admin dashboard
 export const getadminProjectDetails = async (req, res) => {
@@ -350,4 +216,152 @@ export const getadminProjectDetails = async (req, res) => {
   }
 };
 
+
+export const addUser = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      phone,
+      role,
+      reportTo,
+      experience,
+      projects,
+    } = req.body;
+
+    // Ensure all required fields are present
+    if (
+      !name ||
+      !email ||
+      !phone ||
+      !role ||
+      !reportTo ||
+      !experience 
+        ) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing required fields" });
+    }
+
+    const newUser = new UserModel({
+      name,
+      email,
+      phone,
+      role,
+      reportTo,
+      experience,
+      projects,
+      password: "Ankit1234@",
+      isVerified: true,
+    });
+
+    await newUser.save();
+    res.json({ success: true, user: newUser });
+  } catch (error) {
+    console.error("Error adding user:", error);
+    if (error.name === "ValidationError") {
+      res
+        .status(400)
+        .json({
+          success: false,
+          message: "Validation error",
+          details: error.message,
+        });
+    } else {
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
+    }
+  }
+};
+
+// Delete a user
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userID = id; // Assuming the ID is passed as a parameter
+    const userExists = await UserModel.findById(userID);
+    if (!userExists) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    let fileUrlsToDelete = [];
+    const tasks = await TaskModel.find({
+      $or: [
+        { assigneeId: userID },
+        { createdById: userID },
+        { "comments.userId": userID },
+      ],
+    });
+    tasks.forEach((task) => {
+      task.comments.forEach((comment) => {
+        if (comment.attachments?.length) {
+          fileUrlsToDelete.push(...comment.attachments);
+        }
+      });
+    });
+    try {
+      // First, delete the files from S3
+      if (fileUrlsToDelete.length > 0) {
+        const fileNamesArray = fileUrlsToDelete.map(
+          (url) => (Array.isArray(url) ? url : [url]) // Wrap each url in an array if it's not already an array
+        );
+
+        const deletePromises = fileNamesArray.map(
+          (fileUrl) => deleteFilesFromS3(fileUrl) // Assume deleteFilesS3 is a function that handles file deletion from S3
+        );
+
+        // Wait for all file deletions to complete
+        await Promise.all(deletePromises);
+       
+      }
+    } catch {
+      console.log("error deleteing files");
+      return res
+        .status(404)
+        .json({ success: false, message: "fiole sdfsdfn not deltedddddd" });
+    }
+
+    // Remove references from other collections
+    await Promise.all([
+      Notification.deleteMany({ user_id: userID }),
+      ProjectModel.updateMany({}, { $unset: { [`members.${userID}`]: 1 } }),
+      ProjectModel.updateMany(
+        { projectCreatedBy: userID },
+        { $set: { projectCreatedBy: null } }
+      ),
+      RequestModel.deleteMany({ userID }),
+      TaskModel.updateMany(
+        { assigneeId: userID },
+        { $set: { assignee: "NA", assigneeId: null } }
+      ),
+      TaskModel.updateMany(
+        { createdById: userID },
+        { $set: { createdBy: "NA", createdById: null } }
+      ),
+      TaskModel.updateMany({}, { $pull: { comments: { userId: userID } } }),
+      TempTimeModel.deleteMany({ userId: userID }),
+      TimeSheetModel.deleteMany({ userId: userID }),
+    ]);
+
+    // Delete user from UserModel
+    await UserModel.findByIdAndDelete(userID);
+
+        
+    // Remove the request itself
+    await RequestModel.deleteMany({ targetUserID: userID });
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "User deleted successfully and references removed.",
+      });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 
