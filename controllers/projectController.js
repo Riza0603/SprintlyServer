@@ -775,19 +775,17 @@ export const projectEngagementRate = async (req, res) => {
 export const updateProjectStatus= async (req,res)=>{
   try{
     const {projectName}=req.params;
-    
     const Tasks= await TaskModel.find({projectName});
+    const Proj= await ProjectModel.find({pname:projectName});
     
     const totalTasks= Tasks.length;
     const completedTasks=Tasks.filter(task=>task.status==="Completed").length;
-    const delayedTasks=Tasks.filter(task=>task.endDate< new Date() && task.status!=="Completed").length;
  
-    const delayPercentage= delayedTasks/totalTasks*100;
     if(totalTasks===completedTasks && totalTasks!=0 ){
      
       await ProjectModel.findOneAndUpdate({pname:projectName},{pstatus:"Completed"},{new:true});
       
-    }else if(delayPercentage>=75){
+    }else if(new Date(Proj[0].pend)< new Date()){
       await ProjectModel.findOneAndUpdate({pname:projectName},{pstatus:"Delayed"},{new:true});
       
     }else{
@@ -800,6 +798,7 @@ export const updateProjectStatus= async (req,res)=>{
 
   }
 }
+
 
 //Update Project admin
 export const updateProjects = async (req, res) => {
