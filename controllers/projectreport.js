@@ -16,9 +16,9 @@ const __dirname = path.dirname(__filename);
 export const generateReport = async (req, res) => {
   try {
     const { projectName } = req.params;
-    const {startDate, endDate} = req.body;
+    const { startDate, endDate } = req.body;
 
-    const project= await ProjectModel.findOne({pname:projectName});
+    const project = await ProjectModel.findOne({ pname: projectName });
 
     if (!project) return res.status(404).json({ error: "Project not found" });
 
@@ -30,14 +30,14 @@ export const generateReport = async (req, res) => {
         $lte: endDate
       };
     }
-    
+
     const tasks = await TaskModel.find(query);
-    
+
 
     const completedTasks = tasks.filter((t) => t.status === "Completed").length;
     const inProgressTasks = tasks.filter((t) => t.status === "In-Progress").length;
     const pendingTasks = tasks.length - (completedTasks + inProgressTasks);
-    const progress = tasks.length > 0 ? Math.round((pendingTasks * 0 + inProgressTasks * 50 + completedTasks * 100) /tasks.length): 0;
+    const progress = tasks.length > 0 ? Math.round((pendingTasks * 0 + inProgressTasks * 50 + completedTasks * 100) / tasks.length) : 0;
 
     // Check if the project exists and has a valid pname
     if (!project || !project.pname) {
@@ -53,21 +53,21 @@ export const generateReport = async (req, res) => {
     const users = await UserModel.find({ _id: { $in: memberIds } });
 
     const teamMembers = users.map((user) => {
-    const details = project.members.get(user._id.toString());
-    return {
-      name: user.name,
-      role: details?.position || "Employee",
+      const details = project.members.get(user._id.toString());
+      return {
+        name: user.name,
+        role: details?.position || "Employee",
       };
     });
 
-    const doc = new PDFDocument({ margin: 40 }); 
+    const doc = new PDFDocument({ margin: 40 });
 
     const ganttChartImagePath = path.join(__dirname, 'ganttchart.png');
     await downloadGanttChartImage(tasks, ganttChartImagePath);
 
     // Setup the filename and file path
     const filename = `ProjectReport_${Date.now()}.pdf`;
-    const filePath = path.join(__dirname, filename); 
+    const filePath = path.join(__dirname, filename);
 
     // Create a write stream to save the PDF on the server
     const writeStream = fs.createWriteStream(filePath);
@@ -77,9 +77,9 @@ export const generateReport = async (req, res) => {
     doc.fillColor("#2E3A59").font("Helvetica-Bold").fontSize(24).text("PROJECT REPORT", { align: "center" }).moveDown(0.5);
 
     // Add Horizontal Navbar (filled bar)
-    const navbarHeight = 20; 
+    const navbarHeight = 20;
     doc.rect(45, doc.y, 520, navbarHeight).fill("#2E3A59").stroke();
-    doc.moveDown(1.5); 
+    doc.moveDown(1.5);
 
     // Project Details
     doc.fontSize(18).fillColor("#1F2D3D").text("Project Details", { underline: true }).moveDown(0.5);
@@ -105,7 +105,7 @@ export const generateReport = async (req, res) => {
 
     const teamTableTop = doc.y;
     const teamRowHeight = 20;
-    const teamColWidths = [125, 125]; 
+    const teamColWidths = [125, 125];
 
     doc.fontSize(12).fillColor("#FFFFFF").rect(50, teamTableTop, teamColWidths.reduce((a, b) => a + b, 0), teamRowHeight).fill("#2E3A59");
     doc.fillColor("#FFFFFF").text("Team Member", 90, teamTableTop + 5);
@@ -124,7 +124,7 @@ export const generateReport = async (req, res) => {
       doc.text(member.name, 105, teamY + 5, { width: teamColWidths[0] - 5, align: "left" });
       doc.text(member.role || "Unknown", 190, teamY + 5, { width: teamColWidths[1], align: "center" });
 
-      teamY += teamRowHeightDynamic; 
+      teamY += teamRowHeightDynamic;
     });
 
     doc.moveDown(1);
@@ -151,67 +151,67 @@ export const generateReport = async (req, res) => {
 
     let y = doc.y;
 
-drawTableHeader(y);
-y += rowHeight;
+    drawTableHeader(y);
+    y += rowHeight;
 
-if (tasks.length === 0) {
-  // Draw row border (like other rows)
-  const totalWidth = colWidths.reduce((a, b) => a + b, 0);
-  doc.rect(50, y, totalWidth, rowHeight).stroke();
+    if (tasks.length === 0) {
+      // Draw row border (like other rows)
+      const totalWidth = colWidths.reduce((a, b) => a + b, 0);
+      doc.rect(50, y, totalWidth, rowHeight).stroke();
 
-  // Draw centered text inside the row
-  doc.fontSize(10)
-     .fillColor("gray")
-     .text("No tasks to display", 50, y + 5, {
-       width: totalWidth,
-       align: "center"
-     });
+      // Draw centered text inside the row
+      doc.fontSize(10)
+        .fillColor("gray")
+        .text("No tasks to display", 50, y + 5, {
+          width: totalWidth,
+          align: "center"
+        });
 
-  y += rowHeight; // Move cursor down if needed later
+      y += rowHeight; // Move cursor down if needed later
 
-} else {
-  doc.fillColor("black").fontSize(10);
+    } else {
+      doc.fillColor("black").fontSize(10);
 
-  for (let i = 0; i < tasks.length; i++) {
-    const task = tasks[i];
-    const titleHeight = doc.heightOfString(task.title || "", { width: colWidths[0] - 5 });
-    const rowHeightDynamic = Math.max(rowHeight, titleHeight + 10);
+      for (let i = 0; i < tasks.length; i++) {
+        const task = tasks[i];
+        const titleHeight = doc.heightOfString(task.title || "", { width: colWidths[0] - 5 });
+        const rowHeightDynamic = Math.max(rowHeight, titleHeight + 10);
 
-    if (y + rowHeightDynamic > pageHeight) {
-      doc.addPage();
-      y = doc.page.margins.top;
-      drawTableHeader(y);
-      y += rowHeight;
-      i--;
-      continue;
+        if (y + rowHeightDynamic > pageHeight) {
+          doc.addPage();
+          y = doc.page.margins.top;
+          drawTableHeader(y);
+          y += rowHeight;
+          i--;
+          continue;
+        }
+
+        if (task && typeof task === "object") {
+          doc.rect(50, y, colWidths.reduce((a, b) => a + b, 0), rowHeightDynamic).stroke();
+
+          doc.text(task.title || "Untitled", 55, y + 5, { width: colWidths[0] - 5, align: "left" });
+          doc.text(task.assignee || "Unknown", 205, y + 5, { width: colWidths[1], align: "center" });
+          doc.text(task.createdBy || "Unknown", 305, y + 5, { width: colWidths[2], align: "center" });
+          doc.text(task.priority || "N/A", 405, y + 5, { width: colWidths[3], align: "center" });
+
+          const statusColor = task.status === "Completed"
+            ? "#4CAF50"
+            : task.status === "In-Progress"
+              ? "#FFC107"
+              : "#F44336";
+
+          doc.fillColor(statusColor).text(task.status || "N/A", 485, y + 5, {
+            width: colWidths[4],
+            align: "center"
+          });
+
+          doc.fillColor("black");
+          y += rowHeightDynamic;
+        }
+      }
     }
 
-    if (task && typeof task === "object") {
-      doc.rect(50, y, colWidths.reduce((a, b) => a + b, 0), rowHeightDynamic).stroke();
 
-      doc.text(task.title || "Untitled", 55, y + 5, { width: colWidths[0] - 5, align: "left" });
-      doc.text(task.assignee || "Unknown", 205, y + 5, { width: colWidths[1], align: "center" });
-      doc.text(task.createdBy || "Unknown", 305, y + 5, { width: colWidths[2], align: "center" });
-      doc.text(task.priority || "N/A", 405, y + 5, { width: colWidths[3], align: "center" });
-
-      const statusColor = task.status === "Completed"
-        ? "#4CAF50"
-        : task.status === "In-Progress"
-        ? "#FFC107"
-        : "#F44336";
-
-      doc.fillColor(statusColor).text(task.status || "N/A", 485, y + 5, {
-        width: colWidths[4],
-        align: "center"
-      });
-
-      doc.fillColor("black");
-      y += rowHeightDynamic;
-    }
-  }
-}
-
-        
     function ensureSpace(requiredHeight) {
       if (doc.y + requiredHeight > doc.page.height - doc.page.margins.bottom) {
         doc.addPage();
@@ -264,15 +264,24 @@ if (tasks.length === 0) {
 
     // === Pie Chart Section ===
     ensureSpace(220);
-    doc.moveDown(1);
+    doc.moveDown(2);
     doc.image("piechart.png", { width: 330, x: -5 });
+
+    doc.moveDown(3);
+    doc
+      .font("Times-Italic")
+      .fontSize(12)
+      .fillColor("gray")
+      .text("Fig: Pie chart showing the project progress", { align: "center" })
+      .moveDown(1)
+      .font("Times-Roman");
 
     // Labels for pie chart (Completed/Remaining boxes)
     const boxX = doc.x + 270;
-    const completedBoxY = doc.y - 75;
+    const completedBoxY = doc.y - 100;
     const remainingBoxY = completedBoxY + 22;
 
-    doc.rect(boxX, completedBoxY, 30, 10).fill("#4CAF50"); 
+    doc.rect(boxX, completedBoxY, 30, 10).fill("#4CAF50");
     doc.rect(boxX, remainingBoxY, 30, 10).fill("#E0E0E0");
 
     doc.fontSize(12)
@@ -281,12 +290,12 @@ if (tasks.length === 0) {
       .moveDown(0.5)
       .text(`Remaining: ${100 - progress}%`);
 
-      const ganttChartUrl = await generateGanttChart(tasks);  
-    
+    const ganttChartUrl = await generateGanttChart(tasks);
+
     // === Gantt Chart Section ===
-    const ganttChartTitleHeight = 30; 
+    const ganttChartTitleHeight = 30;
     const ganttChartImageHeight = 300;
-    const ganttSectionTotalHeight = ganttChartTitleHeight + ganttChartImageHeight + 30; 
+    const ganttSectionTotalHeight = ganttChartTitleHeight + ganttChartImageHeight + 30;
 
     const isSpaceAvailable = doc.y + ganttSectionTotalHeight <= doc.page.height - doc.page.margins.bottom;
 
@@ -300,8 +309,17 @@ if (tasks.length === 0) {
       underline: true,
     }).moveDown(0.5);
 
-    doc.image(ganttChartImagePath, 50, doc.y, { width: 450 }).moveDown(1);
+    const ganttImageHeight = 300;
+    doc.image(ganttChartImagePath, 50, doc.y, { width: 450, height: ganttImageHeight });
+    doc.y += ganttImageHeight + 10; // Add spacing after image
 
+    doc
+      .font("Times-Italic")
+      .fontSize(12)
+      .fillColor("gray")
+      .text("Fig: Gantt chart showing the project timeline", { align: "center" })
+      .moveDown(2)
+      .font("Times-Roman"); // restore default
 
     // End the PDF
     doc.end();
@@ -328,19 +346,21 @@ async function generateGanttChart(tasks) {
   }));
 
   const chartConfig = {
-    type: "bar", 
+    type: "bar",
     data: {
-      labels: taskData.map((t) => t.label),
-      datasets: [
+      labels: taskData.map((t) =>
+        t.label.length > 20 ? t.label.slice(0, 17) + "..." : t.label
+      ),
+            datasets: [
         {
           label: "Task Duration (Days)",
-          data: taskData.map((t) => t.duration), 
+          data: taskData.map((t) => t.duration),
           backgroundColor: taskData.map((t) =>
             t.status === "Completed"
               ? "#4CAF50" // Green for "Completed"
               : t.status === "In-Progress"
-              ? "#FFC107" // Yellow for "In-Progress"
-              : "#F44336" // Red for "No Progress"
+                ? "#FFC107" // Yellow for "In-Progress"
+                : "#F44336" // Red for "No Progress"
           ),
           borderColor: "#000",
           borderWidth: 1.5,
@@ -348,7 +368,7 @@ async function generateGanttChart(tasks) {
       ],
     },
     options: {
-      indexAxis: "y", 
+      indexAxis: "y",
       scales: {
         x: {
           title: { display: true, text: "Duration (Days)" },
@@ -367,15 +387,15 @@ async function generateGanttChart(tasks) {
 async function downloadGanttChartImage(tasks, outputPath = "ganttchart.png") {
   // Generate the Gantt chart URL
   const chartUrl = await generateGanttChart(tasks);
-  
+
   // Get the Gantt chart image as a buffer
   const response = await axios.get(chartUrl, { responseType: 'arraybuffer' });
-  
+
   // Save the image to the specified output path
   fs.writeFileSync(outputPath, response.data);
-  
+
   console.log(`Gantt chart image saved to ${outputPath}`);
-  
+
 }
 
 async function generatePieChart(progress) {
@@ -448,15 +468,15 @@ async function downloadPieChartImage(progress, outputPath = "piechart.png") {
 
 async function generateWorkloadChart(tasks) {
   const memberWorkload = {};
-tasks.forEach((task) => {
-  const assignee = task.assignee?.trim() || "NA";
-  memberWorkload[assignee] = (memberWorkload[assignee] || 0) + 1;
-});
+  tasks.forEach((task) => {
+    const assignee = task.assignee?.trim() || "NA";
+    memberWorkload[assignee] = (memberWorkload[assignee] || 0) + 1;
+  });
 
-const members = Object.keys(memberWorkload);
-const workloadPercentage = members.map(
-  (member) => Math.round((memberWorkload[member] / tasks.length) * 100)
-);
+  const members = Object.keys(memberWorkload);
+  const workloadPercentage = members.map(
+    (member) => Math.round((memberWorkload[member] / tasks.length) * 100)
+  );
 
 
   // Now creating a horizontal progress line instead of a bar chart
@@ -477,9 +497,9 @@ const workloadPercentage = members.map(
     options: {
       indexAxis: "y", // Set horizontal bars
       scales: {
-        x: { 
+        x: {
           min: 0,
-          max: 100, 
+          max: 100,
           ticks: {
             callback: (value) => `${value}%`, // Display percentage on the axis
           },
