@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-
+import dotenv from "dotenv";
 import TaskModel from "../models/Tasks.js";
 import ProjectModel from "../models/Projects.js";
 import UserModel from "../models/User.js"; 
