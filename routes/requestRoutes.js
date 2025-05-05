@@ -6,7 +6,7 @@ router.get("/get_all_requests",getAllRequests);
 // router.get("/", getAllRequests); //new route created
 
 router.post("/create_admin_access_request",createAdminAccessRequest);
-router.post("/create_user_addition_request",createUserAdditionRequest);
+// router.post("/create_user_addition_request",createUserAdditionRequest);
 router.post("/deleteProjectRequest/:projectID",createProjectDeletionRequest);
 router.post("/create_user_deletion_request",createUserDeletionRequest);
 router.post("/adminAccessRequestHandler",adminAccessHandler);

@@ -1,15 +1,16 @@
+import mongoose from "mongoose";
 import ProjectModel from "../models/Projects.js";
 import TaskModel from "../models/Tasks.js";
-import UserModel from "../models/User.js";
-import TimeSheetModel from "../models/TimeSheets.js";
 import TempTimeModel from "../models/TempTime.js";
+import TimeSheetModel from "../models/TimeSheets.js";
+import UserModel from "../models/User.js";
+import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/emailService.js";
 import { createNotification } from "./notificationController.js";
-import mongoose from "mongoose";
-import { sendProjectAdditionEmail, sendProjectRemovalEmail } from "../services/emailService.js";;
+;
 
 //create a new project
 export const createProject = async (req, res) => {
-  const { pname, pdescription, projectCreatedBy, pstart, pend, members } = req.body;
+  const { pname, pdescription, projectCreatedBy, pstart, pend, members,budget } = req.body;
 
   if (!pname || !pdescription || !pstart || !pend) {
     return res.status(400).json({ message: "All fields are required" });
@@ -17,7 +18,7 @@ export const createProject = async (req, res) => {
 
   try {
     const existingProject = await ProjectModel.findOne({ pname })
-    .collation({ locale: "en", strength: 2 });  //case insesitive search
+      .collation({ locale: "en", strength: 2 });  //case insesitive search
     if (existingProject) {
       return res.status(400).json({
         message: "Project with the same name already exists",
@@ -30,17 +31,17 @@ export const createProject = async (req, res) => {
       return res.status(404).json({ message: "Project creator not found" });
     }
 
-   // Convert array of memberIds into a Map object
-   const membersMap = {};
-   members.forEach(memberId => {
-     membersMap[memberId] = {
-       notifyinApp: true,
-       notifyinEmail: true,
-       position: memberId === projectCreatedBy ? "Project Manager" : "Employee",
-     };
-   });
+    // Convert array of memberIds into a Map object
+    const membersMap = {};
+    members.forEach(memberId => {
+      membersMap[memberId] = {
+        notifyinApp: true,
+        notifyinEmail: true,
+        position: memberId === projectCreatedBy ? "Project Manager" : "Employee",
+      };
+    });
 
-    const project = await ProjectModel.create({ pname, pdescription, projectCreatedBy, pstart, pend, members: membersMap });
+    const project = await ProjectModel.create({ pname, pdescription, projectCreatedBy, pstart, pend,budget, members: membersMap });
 
     const users = await Promise.all(
       members.map(async (memberId) => {
@@ -92,8 +93,27 @@ export const createProject = async (req, res) => {
 //fetches projects
 export const fetchProjects = async (req, res) => {
   try {
-    const projects = await ProjectModel.find();
-    res.status(200).json(projects);
+    const projects = await ProjectModel.find().lean();
+    const populatedProjects = await Promise.all(
+      projects.map(async (project) => {
+        const memberEntries = Object.entries(project.members);
+        const managerEntry = memberEntries.find(
+          ([, details]) => details.position === "Project Manager"
+        );
+        let managerName = "Not Assigned";
+        if (managerEntry) {
+          const [managerId] = managerEntry;
+          const user = await UserModel.findById(managerId).lean();
+          managerName = user ? user.name : "Unknown User";
+        }
+        return {
+          ...project,
+          pmanager: managerName,
+        };
+      })
+    );
+
+    res.status(200).json(populatedProjects);
   } catch (err) {
     console.error("Error in fetchProjects:", err.message);
     res.status(500).json({ message: err.message });
@@ -112,7 +132,7 @@ export const getProjectByName = async (req, res) => {
 
     res.status(200).json(project);
   } catch (err) {
-    console.error(err); 
+    console.error(err);
     res.status(500).json({ message: "Error in getProjectByName()" });
   }
 };
@@ -206,7 +226,7 @@ export const updateProject = async (req, res) => {
       { new: true }  // `new: true` returns the updated document
     );
 
-   
+
 
     res.status(200).json({ message: "Project updated successfully", updatedProject });
   } catch (error) {
@@ -230,7 +250,7 @@ export const updateGlobalSettings = async (req, res) => {
           [`members.${req.body.userId}.notifyinEmail`]: notifyEmail,
         },
       }
-    );    
+    );
 
     return res.status(200).json({
       message: "Global settings updated successfully",
@@ -401,7 +421,7 @@ export const addMember = async (req, res) => {
       },
       { new: true }
     );
-    
+
 
     // Fetch the name of the project creator
     const creator = await UserModel.findById(project.projectCreatedBy).select("name");
@@ -421,7 +441,7 @@ export const addMember = async (req, res) => {
         createdBy: creator.name || "Someone",
         startDate: formatDate(project.pstart),
         endDate: formatDate(project.pend),
-      },      
+      },
     });
 
     res.status(200).json(member);
@@ -436,21 +456,21 @@ const formatDate = (date) => {
 
 
 //delete from both user and project table
-export const deleteUser= async (req,res)=>{
-  try{
-    const memberId=req.params.memberId;
-   
+export const deleteUser = async (req, res) => {
+  try {
+    const memberId = req.params.memberId;
+
     const updateProject = await ProjectModel.updateMany(
       { [`members.${memberId}`]: { $exists: true } },
       { $unset: { [`members.${memberId}`]: "" } }
     );
 
     const updateUser = await UserModel.findByIdAndDelete(memberId);
-    if(!updateProject){
-      return res.status(404).json({ message: "Member not found in project",  });
+    if (!updateProject) {
+      return res.status(404).json({ message: "Member not found in project", });
     }
     res.status(200).json({ message: "Member deleted successfully" });
-  }catch(err){
+  } catch (err) {
     res.status(500).json({ message: "Error deleting member", err });
   }
 }
@@ -552,20 +572,20 @@ export const fetchWorkLoad = async (req, res) => {
 
 
 //get project name by creator id
-export const getProjectByManager=async(req,res)=>{
-  try{
-    const {projectCreatedById}=req.params;
-    const project=await ProjectModel.find({projectCreatedBy:projectCreatedById},"pname");
-   
-    if(!project){
-      return res.status(404).json({message:"No project found"})
+export const getProjectByManager = async (req, res) => {
+  try {
+    const { projectCreatedById } = req.params;
+    const project = await ProjectModel.find({ projectCreatedBy: projectCreatedById }, "pname");
+
+    if (!project) {
+      return res.status(404).json({ message: "No project found" })
     }
-    res.status(200).json(project);  
-}
-catch (err) {
-  console.error("Error:", err);
-  res.status(500).json({ error: err.message });
-}
+    res.status(200).json(project);
+  }
+  catch (err) {
+    console.error("Error:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 
 
@@ -639,7 +659,6 @@ export const scheduleVariance = async (req, res) => {
     const plannedCompletion = Math.min((daysPassed / totalProjectDuration) * 100, 100);
     const actualCompletion = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
     const scheduleVariance = actualCompletion - plannedCompletion;
-
     res.json({ projectName, totalTasks, completedTasks, plannedCompletion, actualCompletion, scheduleVariance });
 
   } catch (error) {
@@ -661,14 +680,14 @@ export const effortDistribution = async (req, res) => {
       return res.status(404).json({ message: "No time logs found for this project" });
     }
 
-    let userTotalHours = {}; 
-    let userProjectHours = {}; 
+    let userTotalHours = {};
+    let userProjectHours = {};
 
     for (const timesheet of timesheets) {
       for (const entry of timesheet.timeSheet) {
         for (const project of entry.projectsHours) {
           if (project.status === "Approved") {  // Extract time only if status is Approved
-            const timeInHours = project.time / (1000 * 60 * 60); 
+            const timeInHours = project.time / (1000 * 60 * 60);
             const userId = timesheet.userId.toString();
 
             if (!userTotalHours[userId]) {
@@ -720,9 +739,9 @@ export const projectEngagementRate = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    const totalMembers = project.members instanceof Map 
-    ? project.members.size 
-    : Object.keys(project.members || {}).filter(key => !key.startsWith("$")).length;
+    const totalMembers = project.members instanceof Map
+      ? project.members.size
+      : Object.keys(project.members || {}).filter(key => !key.startsWith("$")).length;
 
     if (totalMembers === 0) {
       return res.status(200).json({ projectName, engagementRate: 0, totalMembers, activeUsers: 0, activeUserNames: [] });
@@ -736,7 +755,7 @@ export const projectEngagementRate = async (req, res) => {
 
     const activeUserIds = activeUsers.map((user) => user.userId);
 
-    const activeUserNames = await UserModel.find({ _id: { $in: activeUserIds } },"name");
+    const activeUserNames = await UserModel.find({ _id: { $in: activeUserIds } }, "name");
 
     const engagementRate = (activeUsers.length / totalMembers) * 100;
 
@@ -756,19 +775,17 @@ export const projectEngagementRate = async (req, res) => {
 export const updateProjectStatus= async (req,res)=>{
   try{
     const {projectName}=req.params;
-    
     const Tasks= await TaskModel.find({projectName});
+    const Proj= await ProjectModel.find({pname:projectName});
     
     const totalTasks= Tasks.length;
     const completedTasks=Tasks.filter(task=>task.status==="Completed").length;
-    const delayedTasks=Tasks.filter(task=>task.endDate< new Date() && task.status!=="Completed").length;
  
-    const delayPercentage= delayedTasks/totalTasks*100;
     if(totalTasks===completedTasks && totalTasks!=0 ){
      
       await ProjectModel.findOneAndUpdate({pname:projectName},{pstatus:"Completed"},{new:true});
       
-    }else if(delayPercentage>=75){
+    }else if(new Date(Proj[0].pend)< new Date()){
       await ProjectModel.findOneAndUpdate({pname:projectName},{pstatus:"Delayed"},{new:true});
       
     }else{
@@ -781,37 +798,55 @@ export const updateProjectStatus= async (req,res)=>{
 
   }
 }
+
+
 //Update Project admin
 export const updateProjects = async (req, res) => {
   try {
     const { projectId } = req.params;
     const updateData = req.body;
 
-    // Validate: Check if request body is empty
+    // Validate projectId before querying the database
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ message: "Invalid project ID" });
+    }
+
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ message: "No update data provided" });
     }
 
-    // *Check if a project with the same name already exists (excluding the current project)*
+    // Check if the project name already exists
     if (updateData.pname) {
-      const existingProject = await ProjectModel.findOne({ 
-        pname: updateData.pname, 
-        _id: { $ne: projectId } // Excluding current project from the check
+      const existingProjectWithSameName = await ProjectModel.findOne({
+        pname: updateData.pname,
+        _id: { $ne: projectId } // Ensure it's not checking against itself
       });
 
-      if (existingProject) {
+      if (existingProjectWithSameName) {
         return res.status(400).json({ message: "Project with this name already exists. Please choose a different name." });
       }
     }
 
-     // member update logic for Map type Project.js
-     if (updateData.members) {
+    // Fetch the existing project before updating
+    const existingProject = await ProjectModel.findById(projectId);
+    if (!existingProject) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    const oldProjectName = existingProject.pname;
+    const oldMembersList = existingProject.members instanceof Map
+      ? Array.from(existingProject.members.keys()) // Extract keys if it's a Map
+      : Object.keys(existingProject.members || {});
+
+    // Ensure `members` are formatted correctly before updating
+    if (updateData.members) {
       const formattedMembers = {};
-      updateData.members.forEach((memberId) => {
-        formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true, position: "Employee" }; // Default values
+      updateData.members.forEach(memberId => {
+        if (mongoose.Types.ObjectId.isValid(memberId)) {
+          formattedMembers[memberId] = { notifyinApp: true, notifyinEmail: true };
+        }
       });
 
-      // Ensure updated project manager is assigned correct role
       if (updateData.projectCreatedBy) {
         formattedMembers[updateData.projectCreatedBy] = {
           notifyinApp: true,
@@ -819,16 +854,10 @@ export const updateProjects = async (req, res) => {
           position: "Project Manager"
         };
       }
-
-      updateData.members = formattedMembers; // Replace the existing Map properly
+      updateData.members = formattedMembers;
     }
 
-    // Handle attachments update if it's an array
-    if (updateData.pAttachments) {
-      updateData.pAttachments = { $each: updateData.pAttachments };
-    }
-
-    // Perform update
+    // Perform the update (ONLY ONCE)
     const updatedProject = await ProjectModel.findByIdAndUpdate(
       projectId,
       { $set: updateData },
@@ -836,29 +865,77 @@ export const updateProjects = async (req, res) => {
     );
 
     if (!updatedProject) {
-      return res.status(404).json({ message: "Project not found" });
+      return res.status(404).json({ message: "Project not found after update." });
+    }
+
+    // Extract updated members list after update
+    const updatedMembersList = updatedProject.members instanceof Map
+      ? Array.from(updatedProject.members.keys())
+      : Object.keys(updatedProject.members || {});
+
+    // Identify removed and added members
+    const removedMembers = oldMembersList.filter(member => !updatedMembersList.includes(member));
+    const validRemovedMembers = removedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
+
+    const addedMembers = updatedMembersList.filter(member => !oldMembersList.includes(member));
+    const validAddedMembers = addedMembers.filter(memberId => mongoose.Types.ObjectId.isValid(memberId));
+
+    // Remove project name from `registers` for removed members
+    if (validRemovedMembers.length > 0) {
+      await UserModel.updateMany(
+        { _id: { $in: validRemovedMembers } },
+        { $pull: { projects: { $in: [oldProjectName, updateData.pname || oldProjectName] } } }
+      );
+    }
+
+    // Add project name to newly added members in the `registers` table 
+    if (validAddedMembers.length > 0) {
+      await UserModel.updateMany(
+        { _id: { $in: validAddedMembers } },
+        { $addToSet: { projects: updateData.pname } }
+      );
+    }
+
+    // Update `registers` table to replace old project name
+    if (updateData.pname && updateData.pname !== oldProjectName) {
+      await UserModel.updateMany(
+        { "projects": oldProjectName },
+        { $set: { "projects.$": updateData.pname } } // Replace old project name with the new one
+      );
+    }
+
+    // Update related data in other models when the project name changes
+    if (updateData.pname && updateData.pname !== oldProjectName) {
+      await Promise.all([
+        TaskModel.updateMany({ projectName: oldProjectName }, { $set: { projectName: updateData.pname } }),
+        TempTimeModel.updateMany({ projectName: oldProjectName }, { $set: { projectName: updateData.pname } }),
+
+        // Correctly updating project names inside arrays in TimeSheet
+        TimeSheetModel.updateMany(
+          { "timeSheet.projectsHours.projectName": oldProjectName },
+          { $set: { "timeSheet.$[].projectsHours.$[elem].projectName": updateData.pname } },
+          { arrayFilters: [{ "elem.projectName": oldProjectName }] }
+        )
+      ]);
     }
 
     res.status(200).json({ message: "Project updated successfully", project: updatedProject });
+
   } catch (error) {
+    console.error("Error updating project:", error);
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
 
-//Delete Project Admin
-export const deleteProject = async (req, res) => {
+
+//update usedbudget value in project
+export const updateUsedBudget = async (req, res) => {
   try {
     const { projectId } = req.params;
-
-    const deletedProject = await ProjectModel.findByIdAndDelete(projectId);
-   
-    if (!deletedProject) {
-      return res.status(404).json({ message: "Project not found" });
-    }
-
-    res.status(200).json({ message: "Project deleted successfully" });
+    const { usedBudget } = req.body;
+    const updatedProject = await ProjectModel.findByIdAndUpdate(projectId,{ usedBudget },{ new: true });
+    res.status(200).json(updatedProject );
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
-
-}
+};

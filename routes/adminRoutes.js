@@ -1,15 +1,15 @@
 import express from "express";
-import {getAllProjects,getAllUsers,getProjectCounts, deleteProjectAdmin ,getProjectProgress,getUsersByProject,getUnassignedUsers, getadminProjectDetails} from "../controllers/adminController.js"
+import {getProjectCounts, addUser, deleteUser, deleteProjectAdmin , getadminProjectDetails} from "../controllers/adminController.js"
 const router = express.Router();
 
-router.get("/getAllProjects", getAllProjects);
-router.get("/getAllUsers",getAllUsers);
+
 router.get("/getProjectCounts",getProjectCounts);
-router.get("/getProjectProgress",getProjectProgress);
-router.get("/getUserByProject",getUsersByProject);
-router.get("/getUnassignedUsers",getUnassignedUsers);
+// router.get("/getProjectProgress",getProjectProgress);
+// router.get("/getUserByProject",getUsersByProject);
 router.delete("/deleteProjectAdmin/:projectID",deleteProjectAdmin);
-router.get("/getadminProjectDetails",getadminProjectDetails)
+router.get("/getadminProjectDetails",getadminProjectDetails);
+router.post("/addUser", addUser); // Add new user
+router.delete("/deleteUser/:id", deleteUser); // Delete user
 
 
 export default router; 
