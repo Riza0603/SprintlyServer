@@ -5,7 +5,10 @@ const PendingUserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   phone: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  dateOfJoining: { type: Date, required: true }, // Keep for experience calculation
+  dateOfJoining: { type: Date,  default: Date.now },
+  highestDegree: { type: String, default: "N/A" },
+  isOtpVerified: { type: Boolean, default: false },
+  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' }, // Keep for experience calculation
   createdAt: { type: Date, default: Date.now },
 });
 

@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import TaskModel from "../models/Tasks.js";
 import PendingUser from "../models/PendingUser.js";
+import RequestModel from "../models/Requests.js";
 import { sendEmail } from "../services/emailService.js";
 const mongoose = import('mongoose');
 
@@ -20,50 +21,60 @@ const handleErrors = (err, res) => {
   });
 };
 
-//login
 export const login = async (req, res) => {
   try {
-    const user = await User.findOne({ email: req.body.email });
-    
+    const { email, password } = req.body;
 
-    if (!user) {
-      return res.json({ success: false, message: "No such user! Please Sign up." });
+    // Check in main User table first
+    const user = await User.findOne({ email });
+
+    if (user) {
+      if (!user.isVerified) {
+        return res.json({ success: false, message: "Your account is not verified. Please verify your email." });
+      }
+
+      const isValidPassword = await argon2.verify(user.password, password);
+      if (!isValidPassword) {
+        return res.json({ success: false, message: "Invalid password." });
+      }
+
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "8h" });
+
+      const secureUser = (({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess, highestDegree }) =>
+        ({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess, highestDegree }))(user.toObject());
+
+      return res.json({
+        success: true,
+        message: "Login Successful!",
+        user: secureUser,
+        token,
+      });
     }
 
-    if (!user.isVerified) {
-      return res.json({ success: false, message: "Your account is not verified. Please verify your email before logging in." });
+    // If not found in User, check PendingUser
+    const pendingUser = await PendingUser.findOne({ email });
+
+    if (pendingUser) {
+      if (!pendingUser.isOtpVerified) {
+        return res.json({ success: false, message: "Please verify your email using OTP before logging in." });
+      } else {
+        return res.json({ success: false, message: "Your account is pending admin approval." });
+      }
     }
 
-    const isValidPassword = await argon2.verify(user.password, req.body.password);
-    console.log("Is valid password: ", isValidPassword);
-
-    if (!isValidPassword) {
-      return res.json({ success: false, message: "Invalid Password" });
-    }
-
-    // Generate JWT Token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "8h" });
-    
-    const secureUser = (({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess }) => 
-      ({ _id, name, email, phone, role, profilePicUrl, experience, projects, reportTo, adminAccess }))(user.toObject());
-  
-
-    res.json({
-      success: true,
-      message: "Login Successful!",
-      user:secureUser,
-      token,
-    });
+    // No user found at all
+    return res.json({ success: false, message: "No such user! Please sign up." });
 
   } catch (error) {
-    handleErrors(error, res);
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
+
 
 // Registration (Store dateOfJoining in OTP table and PendingUser table)
 export const signup = async (req, res) => {
   const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-  const { name, email, password, phone, dateOfJoining } = req.body;
+  const { name, email, password, phone, dateOfJoining, highestDegree } = req.body;
 
   try {
     const existingUser = await User.findOne({ email });
@@ -73,7 +84,7 @@ export const signup = async (req, res) => {
     const hashedOTP = await bcrypt.hash(verificationCode, 10);
 
     // Store in PendingUser Table
-    await new PendingUser({ name, email, phone, password: hashedPassword, dateOfJoining }).save();
+    await new PendingUser({ name, email, phone, password: hashedPassword, dateOfJoining, highestDegree }).save();
 
     // Store OTP for verification
     await new UserOtpVerification({
@@ -93,45 +104,54 @@ export const signup = async (req, res) => {
   }
 };
 
-// Verify OTP (Move user from PendingUser to User table)
+// Updated verifyOTP logic (Do not move to User yet)
 export const verifyOTP = async (req, res) => {
   const { email, otp } = req.body;
 
   try {
     const otpRecord = await UserOtpVerification.findOne({ email });
-    if (!otpRecord) return res.status(400).json({ success: false, message: "No pending verification found." });
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: "No pending verification found." });
+    }
 
     if (otpRecord.expiresAt < Date.now()) {
-      await UserOtpVerification.updateOne({ email }, { $unset: { otp: "" } });
+      await UserOtpVerification.deleteMany({ email });
       return res.status(400).json({ success: false, message: "OTP expired. Request a new one." });
-    }    
+    }
 
     const validOtp = await bcrypt.compare(otp, otpRecord.otp);
-    if (!validOtp) return res.status(400).json({ success: false, message: "Invalid OTP. Try again." });
+    if (!validOtp) {
+      return res.status(400).json({ success: false, message: "Invalid OTP." });
+    }
 
     const pendingUser = await PendingUser.findOne({ email });
-    if (!pendingUser) return res.status(400).json({ success: false, message: "User data not found." });
+    if (!pendingUser) {
+      return res.status(400).json({ success: false, message: "User data not found." });
+    }
 
-    const joiningDate = new Date(pendingUser.dateOfJoining);
-    const experience = Math.floor((new Date() - joiningDate) / (1000 * 60 * 60 * 24 * 365));
+    // ✅ Mark OTP as verified
+    pendingUser.isOtpVerified = true;
+    await pendingUser.save();
 
-    const newUser = await User.create({
-      name: pendingUser.name,
-      email: pendingUser.email,
-      phone: pendingUser.phone,
-      password: pendingUser.password,
-      experience,
-      isVerified: true,
+    // ✅ Remove OTP record
+    await UserOtpVerification.deleteMany({ email });
+
+    // ✅ Create SIGNUP_REQUEST in Request table
+    const request = new RequestModel({
+      pendingUserID: pendingUser._id,
+      reqType: "SIGNUP_REQUEST",
+      reqStatus: "PENDING",
+      reason: "New user awaiting admin approval"
     });
 
-    await UserOtpVerification.deleteMany({ email });
-    await PendingUser.deleteMany({ email });
+    await request.save();
 
-    res.json({ success: true, message: "User verified and registered successfully.", user: newUser });
+    res.json({ success: true, message: "OTP verified. Awaiting admin approval." });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 // Resend OTP (Retrieve from PendingUser and send new OTP)
 export const resendOTP = async (req, res) => {
@@ -229,7 +249,7 @@ export const getUser = async (req, res) => {
 
   try {
 
-    const user = await User.findOne({ email }).select("name email phone experience role profilePicUrl reportTo adminAccess");
+    const user = await User.findOne({ email }).select("name email phone experience role profilePicUrl reportTo highestDegree adminAccess ");
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -320,4 +340,29 @@ export const fetchById = async (req, res) => {
   } catch (error) {
     handleErrors(error, res);
   }
+};
+
+//fetching pending users
+export const fetchPendingUsers = async (req, res) => {
+  try {
+    const pendingUsers = await PendingUser.find({ isOtpVerified: true });
+    res.json({ success: true, pendingUsers });
+  } catch (error) {
+    handleErrors(error, res);
+  }
+};
+
+export const calculateExperience = (joiningDate) => {
+  const now = new Date();
+  const join = new Date(joiningDate);
+
+  let years = now.getFullYear() - join.getFullYear();
+  let months = now.getMonth() - join.getMonth();
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  return `${years} year(s), ${months} month(s)`;
 };

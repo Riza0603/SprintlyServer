@@ -13,6 +13,8 @@ const userSchema = new mongoose.Schema(
     reportTo: { type: String, default: "N/A" },
     isVerified: { type: Boolean, default: false },
     adminAccess: { type: Boolean, default: false },
+    dateOfJoining: { type: Date, required: true },
+    highestDegree: { type: String, default: "N/A" },
   },
   { timestamps: true }
 );

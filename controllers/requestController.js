@@ -5,11 +5,13 @@ import Notification from "../models/Notification.js";
 import TaskModel from "../models/Tasks.js";
 import TempTimeModel from "../models/TempTime.js";
 import TimeSheetModel from "../models/TimeSheets.js";
+import PendingUser from "../models/PendingUser.js";
 import axios from 'axios';
 import { deleteFilesFromS3 } from "../config/S3functions.js";
 import { createNotification } from "./notificationController.js";
+import { calculateExperience } from "../services/calculateExperience.js";
 import mongoose from "mongoose";
-import { sendAdminAccessStatusEmail, sendProjectDeletionStatusEmail, sendProjectDeletionEmail, sendUserDeletedEmail} from "../services/emailService.js";
+import { sendAdminAccessStatusEmail, sendProjectDeletionStatusEmail, sendProjectDeletionEmail, sendUserDeletedEmail,sendSignupDecisionEmail } from "../services/emailService.js";
 // Approve admin access
 
 export const getAllUsers = async (req, res) => { 
@@ -408,21 +410,49 @@ export const adminAccessHandler = async (req, res) => {
 
 
 //new api created for the fetching necessary data
+// export const getAllRequests = async (req, res) => {
+//     try {
+//         const requests = await RequestModel.find()
+//             .populate("projectName")  // Fetch project name from virtuals
+//             .populate("userDetails")  // Fetch user name & role from virtuals
+//             .populate("targetUserID")
+//             .lean();  // Convert Mongoose documents to plain objects (faster response)
+
+//         res.status(200).json({ success: true, data: requests });  
+//     } catch (error) {
+//         res.status(500).json({ success: false, message: "Error fetching requests", error: error.message });
+//     }
+// };
+
 export const getAllRequests = async (req, res) => {
-    try {
-        const requests = await RequestModel.find()
-            .populate("projectName")  // Fetch project name from virtuals
-            .populate("userDetails")  // Fetch user name & role from virtuals
-            .populate("targetUserID")
-            .lean();  // Convert Mongoose documents to plain objects (faster response)
+  try {
+      const requests = await RequestModel.find()
+          .populate("projectName")
+          .populate("userDetails")
+          .populate("targetUserID")
+          .lean();
 
-        res.status(200).json({ success: true, data: requests });  
-    } catch (error) {
-        res.status(500).json({ success: false, message: "Error fetching requests", error: error.message });
-    }
+      // Attach pending user details to SIGNUP_REQUESTs
+      const enrichedRequests = await Promise.all(
+          requests.map(async (req) => {
+              if (req.reqType === "SIGNUP_REQUEST" && req.pendingUserID) {
+                  const pendingUser = await PendingUser.findById(req.pendingUserID).lean();
+                  return { ...req, pendingUserDetails: pendingUser || null };
+              }
+              return req;
+          })
+      );
+
+      res.status(200).json({ success: true, data: enrichedRequests });
+
+  } catch (error) {
+      res.status(500).json({ 
+          success: false, 
+          message: "Error fetching requests", 
+          error: error.message 
+      });
+  }
 };
-
-
 
 // creating an admin access request
 
@@ -549,7 +579,6 @@ export const createUserDeletionRequest = async (req, res) => {
 
 
 //creating a project deletion request
-
 export const createProjectDeletionRequest = async (req, res) => {
     try {
 
@@ -591,3 +620,59 @@ export const createProjectDeletionRequest = async (req, res) => {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+//signup request approve / reject handler
+export const handleSignupRequest = async (req, res) => {
+  try {
+    const { requestID, decision, adminID } = req.body;
+
+    const request = await RequestModel.findById(requestID);
+    if (!request) {
+      return res.status(404).json({ success: false, message: "Request not found" });
+    }
+
+    if (request.reqType !== "SIGNUP_REQUEST" || !request.pendingUserID) {
+      return res.status(400).json({ success: false, message: "Invalid signup request" });
+    }
+
+    const pendingUser = await PendingUser.findById(request.pendingUserID);
+    if (!pendingUser) {
+      return res.status(404).json({ success: false, message: "Pending user not found" });
+    }
+
+    if (decision === "APPROVED") {
+      const experience = calculateExperience(pendingUser.dateOfJoining);
+
+      const newUser = new UserModel({
+        name: pendingUser.name,
+        email: pendingUser.email,
+        phone: pendingUser.phone,
+        password: pendingUser.password,
+        dateOfJoining: pendingUser.dateOfJoining,
+        role: "Employee",
+        experience: experience,
+        reportTo: "N/A",
+        projects: [],
+        isVerified: true,
+        adminAccess: false,
+        highestDegree: pendingUser.highestDegree,
+      });
+
+      await newUser.save();
+    }
+
+    // Send email notification
+    await sendSignupDecisionEmail(pendingUser, decision);
+
+    // Cleanup
+    await PendingUser.findByIdAndDelete(pendingUser._id);
+    await RequestModel.findByIdAndDelete(requestID);
+
+    res.status(200).json({ success: true, message: `Signup request ${decision.toLowerCase()} and associated records deleted.` });
+  } catch (error) {
+    console.error("Error in handling signup request:", error);
+    res.status(500).json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+

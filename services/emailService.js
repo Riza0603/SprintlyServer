@@ -203,7 +203,7 @@ export const sendEmail = async (email, subject, content, type) => {
                     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: left;">
           
           <div style="display: flex; align-items: center; margin-bottom: 20px;">
-            <img src="https://res.cloudinary.com/dkpvbsfee/image/upload/v1740632251/sprintlyLogo_wn57mg.png" 
+            <img src="https://res.cloudinary.com/dttramgf1/image/upload/v1746426288/sprintlyLogo_k6qrzk.png" 
                  alt="Sprintly Logo" width="50" 
                  style="margin-right: 10px;">
             <h2 style="font-style: italic; color: #333; margin: 0; line-height: 50px;">Sprintly</h2>
@@ -245,7 +245,7 @@ export const sendEmail = async (email, subject, content, type) => {
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: left;">
 
           <div style="display: flex; align-items: center; margin-bottom: 20px;">
-            <img src="https://res.cloudinary.com/dkpvbsfee/image/upload/v1740632251/sprintlyLogo_wn57mg.png" 
+            <img src="https://res.cloudinary.com/dttramgf1/image/upload/v1746426288/sprintlyLogo_k6qrzk.png" 
                 alt="Sprintly Logo" width="50" 
                 style="margin-right: 10px;">
             <h2 style="font-style: italic; color: #333; margin: 0; line-height: 50px;">Sprintly</h2>
@@ -290,7 +290,7 @@ export const sendEmail = async (email, subject, content, type) => {
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: left;">
 
           <div style="display: flex; align-items: center; margin-bottom: 20px;">
-            <img src="https://res.cloudinary.com/dkpvbsfee/image/upload/v1740632251/sprintlyLogo_wn57mg.png" 
+            <img src="https://res.cloudinary.com/dttramgf1/image/upload/v1746426288/sprintlyLogo_k6qrzk.png" 
                 alt="Sprintly Logo" width="50" 
                 style="margin-right: 10px;">
             <h2 style="font-style: italic; color: #333; margin: 0; line-height: 50px;">Sprintly</h2>
@@ -520,4 +520,55 @@ export const sendUserDeletedEmail = async (user) => {
     `,
   });
 };
+
+export const sendSignupDecisionEmail = async (user, decision) => {
+  if (!user.email) return;
+
+  const isApproved = decision === "APPROVED";
+  const subject = isApproved
+    ? "Signup Approved - Welcome to Sprintly!"
+    : "Signup Request Rejected";
+  const color = isApproved ? "#388e3c" : "#d32f2f";
+  const message = isApproved
+    ? `Congratulations ${user.name}, your signup request has been approved! You can now log in and start using Sprintly.`
+    : `Hello ${user.name}, unfortunately, your signup request has been rejected by the admin.`;
+
+  const emailHtml = `
+    <div style="font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; text-align: center;">
+      <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; 
+                  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: left;">
+        
+        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+          <img src="https://res.cloudinary.com/dttramgf1/image/upload/v1746426288/sprintlyLogo_k6qrzk.png" 
+               alt="Sprintly Logo" width="50" 
+               style="margin-right: 10px;">
+          <h2 style="font-style: italic; color: #333; margin: 0; line-height: 50px;">Sprintly</h2>
+        </div>
+
+        <h2 style="color: ${color}; text-align: center;">${subject}</h2>
+        <p style="color: #555; font-size: 16px; text-align: center;">
+          ${message}
+        </p>
+
+        <a href="mailto:sprintlyganglia@gmail.com" 
+           style="display: block; text-align: center; margin-top: 15px; color: #2563eb; font-size: 14px; text-decoration: none;">
+          Need help? Contact Support
+        </a>
+
+        <footer style="margin-top: 20px; font-size: 12px; color: #888; text-align: center;">
+          <p>&copy; ${new Date().getFullYear()} Sprintly. All rights reserved.</p>
+        </footer>
+
+      </div>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: "sprintlyganglia@gmail.com",
+    to: user.email,
+    subject,
+    html: emailHtml,
+  });
+};
+
 

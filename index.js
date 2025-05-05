@@ -14,13 +14,17 @@ import requestRoutes from "./routes/requestRoutes.js";
  
 
 import "./services/deadlineReminder.js";
+import "./services/updateExperience.js";
 
 const app = express();  // Initialize app before using it
 
 app.use(bodyParser.json());  // Now it works because app is initialized
 app.use(express.json());
 app.use(cors({ origin: "*" }));
-app.use(cors({ origin: 'http://localhost:5173' }));
+app.use(cors({
+    origin: ["http://localhost:5173", "http://localhost:5174"], // allow both 5173 and 5174
+    credentials: true,
+  }));
 
 connectDB();
 

@@ -5,19 +5,14 @@ import mongoose from "mongoose";
 const requestSchema = new mongoose.Schema({
     userID: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "registers", // Make sure your user model is named "Register"
-        required: true
-    },
-    // targetUserID: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "registers",
-    //     validate: {
-    //         validator: function (value) {
-    //             return this.reqType === "USER_DELETION" ? !!value : true;
-    //         },
-    //         message: "targetUserID is required for USER_DELETION requests."
-    //     }
-    // },
+        ref: "registers",
+      },
+      
+      pendingUserID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "PendingUser",
+      },
+      
     targetUserID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "registers", // Reference to users collection
@@ -28,17 +23,6 @@ const requestSchema = new mongoose.Schema({
             message: "targetUserID is required for USER_DELETION requests.",
         },
     },
-    // projectID: {
-    //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: "Projects",
-    //     validate: {
-    //         validator: function (value) {
-    //             // return this.reqType === "PROJECT_DELETION" ? !!value : true;
-    //             return this.reqType === "PROJECT_DELETION" || this.reqType === "ADMIN_ACCESS" ? !!value : true;
-    //         },
-    //         message: "projectID is required for PROJECT_DELETION requests."
-    //     }
-    // },
     projectID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Projects",
@@ -51,10 +35,10 @@ const requestSchema = new mongoose.Schema({
     },
     reqType: {
         type: String,
-        enum: ["ADMIN_ACCESS", "USER_ADDITION", "USER_DELETION", "PROJECT_DELETION"],
+        enum: ["ADMIN_ACCESS", "USER_ADDITION", "USER_DELETION", "PROJECT_DELETION", "SIGNUP_REQUEST"],
         required: true,
         trim: true
-    },
+      },      
     reqStatus: {
         type: String,
         enum: ["PENDING", "APPROVED", "REJECTED"],
@@ -101,48 +85,3 @@ requestSchema.set("toJSON", { virtuals: true });
 const RequestModel = mongoose.model("Request", requestSchema);
 
 export default RequestModel;
-
-
-
-
-
-//old schema**************************************************************
-
-// import mongoose from "mongoose";
-
-// const requestSchema = new mongoose.Schema({
-//     userID: {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: 'registers',
-//         required: true
-//     },
-//     targetUserID: {  // New field for the user to be deleted
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: "registers",
-//         required: function () { return this.reqType === "USER_DELETION"; } // Required only for user deletion
-//     },
-//     projectID: {  // New field for project reference
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: 'Projects',  // Assuming your collection name is 'projects'
-//         required: function () { return this.reqType === "PROJECT_DELETION"; } // Required only for project deletions
-//     },
-//     reqType: {
-//         type: String,
-//         enum: ['ADMIN_ACCESS', 'USER_ADDITION', 'USER_DELETION', 'PROJECT_DELETION'],
-//         required: true
-//     },
-//     reqStatus: {
-//         type: String,
-//         enum: ['PENDING', 'APPROVED', 'REJECTED'],
-//         default: 'PENDING'
-//     },
-//     reason: {
-//         type: String,
-//         required: false
-//     }
-// }, { timestamps: true });
-
-// const RequestModel = mongoose.model("Requests", requestSchema);
-
-// export default RequestModel;
-
