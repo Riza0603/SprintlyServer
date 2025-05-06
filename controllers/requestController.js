@@ -111,22 +111,21 @@ export const deleteProjectRequestHandler = async (req, res) => {
       if (!requestID || !adminID || !['APPROVED', 'REJECTED'].includes(decision)) {
         return res.status(400).json({ success: false, message: "Invalid input." });
       }
-  
+      
       // Fetch the request
       const request = await RequestModel.findById(requestID);
       if (!request) {
         return res.status(404).json({ success: false, message: "Request not found." });
       }
-  
       if (request.reqType !== "PROJECT_DELETION") {
         return res.status(400).json({ success: false, message: "Invalid request type." });
       }
-  
+      
+
       const adminUser = await UserModel.findById(adminID);
       if (!adminUser || !adminUser.adminAccess) {
         return res.status(403).json({ success: false, message: "Only admins can approve project deletion." });
       }
-  
       const { userID, projectID } = request;
       const user = await UserModel.findById(userID);
       const project = await ProjectModel.findById(projectID);
@@ -136,7 +135,6 @@ export const deleteProjectRequestHandler = async (req, res) => {
       }
   
       const projectName = project.pname;
-  
       if (decision === "REJECTED") {
         await createNotification({
           user_id: userID,
